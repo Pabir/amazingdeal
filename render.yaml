@@ -1,6 +1,7 @@
 # ========================================================
 # Render Blueprint for AmazingDeal Backend (Spring Boot 3.3 / Java 21)
 # Domain: amazingdeal.co.in
+# 100% Free - No Credit Card Required
 # ========================================================
 services:
   - type: web
@@ -9,7 +10,7 @@ services:
     dockerfilePath: backend/Dockerfile
     dockerContext: backend
     plan: free
-    region: oregon # or frankfurt / singapore
+    region: ohio # US-East (matches Neon DB region us-east-2 for ultra-fast latency)
     healthCheckPath: /api/v1/health
     envVars:
       - key: PORT
@@ -17,13 +18,13 @@ services:
       - key: SPRING_PROFILES_ACTIVE
         value: cloud
       - key: DATABASE_URL
-        sync: false # Set in Render Dashboard: jdbc:postgresql://ep-xxx.us-east-2.aws.neon.tech/amazingdeal?sslmode=require
+        value: jdbc:postgresql://ep-rough-fire-b4tti27m-pooler.c-6.us-east-2.aws.neon.tech:5432/amazingdeal?sslmode=require
       - key: DB_USER
-        sync: false
+        value: amazingdeal_owner
       - key: DB_PASSWORD
-        sync: false
+        value: npg_HoOfLN3E4FDG
       - key: JWT_SECRET
-        generateValue: true
+        value: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
       - key: R2_ACCOUNT_ID
         sync: false
       - key: R2_ACCESS_KEY_ID
