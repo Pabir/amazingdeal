@@ -113,40 +113,44 @@ graph TD
 
 ## 5. Execution Milestones & Checklist
 
-### Phase 1: Spring Boot Multi-Tenant Core (In Progress)
+### Phase 1: Spring Boot Multi-Tenant Core (Completed)
 - [x] Architecture & Schema design
-- [ ] Initialize Spring Boot 3.3.x (Java 21) project with Maven wrapper
-- [ ] Implement `TenantContext`, `TenantFilter`, `TenantResolver`
-- [ ] Base `TenantAwareEntity` with Hibernate `@Filter` and JPA audit hooks
-- [ ] Multi-stage production `Dockerfile` (`eclipse-temurin:21-jre-alpine`)
-- [ ] Cloud-ready `application.yml` supporting Neon PostgreSQL SSL connection strings
+- [x] Initialize Spring Boot 3.3.x (Java 21) project with Maven wrapper
+- [x] Implement `TenantContext`, `TenantFilter`, `TenantResolver`
+- [x] Base `TenantAwareEntity` with Hibernate `@Filter` and JPA audit hooks
+- [x] Multi-stage production `Dockerfile` (`eclipse-temurin:21-jre-alpine`)
+- [x] Cloud-ready `application.yml` connected to Live Neon PostgreSQL
 
-### Phase 2: Core Merchant & Storefront APIs
-- [ ] Auth & Onboarding: `POST /api/v1/auth/register-store`, `POST /api/v1/auth/login`
-- [ ] Merchant Catalog: CRUD `/api/v1/admin/products`, inventory toggle
-- [ ] Pre-signed R2 image upload endpoint `/api/v1/admin/media/upload-url`
-- [ ] Public Storefront: `/api/v1/store/info`, `/api/v1/store/products`, `/api/v1/store/orders`
-- [ ] Dynamic UPI QR code payload generator (`upi://pay?pa={vpa}&pn={name}&am={amount}&tn={order}`)
-- [ ] 58mm/80mm Thermal Receipt Generator endpoint
+### Phase 2: Core Merchant & Storefront APIs (Completed)
+- [x] Auth & Onboarding: `POST /api/v1/auth/register-store`, `POST /api/v1/auth/login`
+- [x] Merchant Catalog: CRUD `/api/v1/admin/products`, inventory toggle
+- [x] Pre-signed R2 image upload endpoint `/api/v1/admin/media/upload-url`
+- [x] Public Storefront: `/api/v1/store/info`, `/api/v1/store/products`, `/api/v1/store/orders`
+- [x] Dynamic UPI QR code payload generator (`upi://pay?pa={vpa}&pn={name}&am={amount}&tn={order}`)
+- [x] 58mm/80mm Thermal Receipt Generator endpoint
+- [x] Validated against Live Neon Cloud Postgres with automated tests
 
-### Phase 3: Merchant Dashboard Frontend (`frontend-admin`)
-- [ ] Vite + React + TypeScript + Tailwind CSS setup
-- [ ] Mobile-first dashboard layout with live store stats
-- [ ] Live incoming order board with audible notification chime
-- [ ] Product catalog manager with image preview and 1-tap stock toggle
-- [ ] Store settings panel (UPI VPA, delivery fees, timings)
-- [ ] Thermal receipt print preview
+### Phase 3: Merchant Dashboard Frontend (`frontend-admin`) (Completed)
+- [x] Vite + React + TypeScript + Tailwind CSS setup
+- [x] Mobile-first dashboard layout with live store stats
+- [x] Live incoming order board with audible notification chime
+- [x] Product catalog manager with image preview and 1-tap stock toggle
+- [x] Store settings panel (UPI VPA, delivery fees, timings)
+- [x] Thermal receipt print preview
+- [x] Production build bundle verified
 
-### Phase 4: Customer Storefront Frontend (`frontend-storefront`)
-- [ ] Subdomain-aware client hook (`useSubdomain`)
-- [ ] Mobile-optimized product catalog with category filter & instant search
-- [ ] Slide-out cart bottom-sheet
-- [ ] 1-step checkout modal (Name, Mobile, Address, Delivery/Pickup)
-- [ ] Instant UPI QR payment modal & Direct Intent App link (GPay, PhonePe, Paytm)
+### Phase 4: Customer Storefront Frontend (`frontend-storefront`) (Completed)
+- [x] Subdomain-aware client hook (`useSubdomain`)
+- [x] Mobile-optimized product catalog with category filter & instant search
+- [x] Slide-out cart bottom-sheet
+- [x] 1-step checkout modal (Name, Mobile, Address, Delivery/Pickup)
+- [x] Instant UPI QR payment modal & Direct Intent App link (GPay, PhonePe, Paytm)
+- [x] Production build bundle verified
 
-### Phase 5: Cloud Deployment & Production Configuration
-- [ ] `render.yaml` backend cloud blueprint
-- [ ] Cloudflare Pages configuration for Admin and Storefront
-- [ ] Cloudflare DNS Wildcard SSL setup guide for `*.amazingdeal.co.in`
-- [ ] Neon Serverless PostgreSQL connection guide
-- [ ] Cloudflare R2 bucket setup guide
+### Phase 5: Cloud Deployment & Production Configuration (Active)
+- [x] Live Neon Serverless Postgres DB Connected & Verified
+- [x] `render.yaml` & `docker-compose.oci.yml` + Caddy SSL configuration created
+- [ ] Connect GitHub repository for automated deployment
+- [ ] Deploy Frontends to Cloudflare Pages (`admin.amazingdeal.co.in` & `*.amazingdeal.co.in`)
+- [ ] Deploy Spring Boot Backend to Oracle Cloud VM (or Render)
+- [ ] Point Cloudflare DNS for `amazingdeal.co.in`
