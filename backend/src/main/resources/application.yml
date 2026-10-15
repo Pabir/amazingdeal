@@ -1,0 +1,97 @@
+server:
+  port: ${PORT:8080}
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+
+spring:
+  application:
+    name: amazingdeal-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:cloud}
+  
+  # Default Cloud Profile: Neon Serverless Postgres
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://${DB_HOST:ep-bold-pond-123456.us-east-2.aws.neon.tech}:${DB_PORT:5432}/${DB_NAME:amazingdeal}?sslmode=require}
+    username: ${DB_USER:neondb_owner}
+    password: ${DB_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+      minimum-idle: 1
+      idle-timeout: 30000
+      max-lifetime: 600000
+      connection-timeout: 20000
+      leak-detection-threshold: 20000
+
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+
+# App Custom Configurations
+app:
+  jwt:
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours
+  cors:
+    allowed-origins:
+      - "https://amazingdeal.co.in"
+      - "https://*.amazingdeal.co.in"
+      - "https://admin.amazingdeal.co.in"
+      - "https://amazingdeal-admin.pages.dev"
+      - "https://amazingdeal-store.pages.dev"
+      - "http://localhost:5173"
+      - "http://localhost:5174"
+      - "http://localhost:3000"
+  cloudflare:
+    r2:
+      account-id: ${R2_ACCOUNT_ID:}
+      access-key-id: ${R2_ACCESS_KEY_ID:}
+      secret-access-key: ${R2_SECRET_ACCESS_KEY:}
+      bucket-name: ${R2_BUCKET_NAME:amazingdeal-media}
+      public-domain: ${R2_PUBLIC_DOMAIN:https://media.amazingdeal.co.in}
+  meta:
+    whatsapp:
+      api-token: ${WHATSAPP_API_TOKEN:}
+      phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+---
+# Fallback Profile: Dev/H2 when Neon DB is not yet connected
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:h2:mem:amazingdeal;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect

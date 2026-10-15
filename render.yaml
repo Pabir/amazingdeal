@@ -1,0 +1,34 @@
+# ========================================================
+# Render Blueprint for AmazingDeal Backend (Spring Boot 3.3 / Java 21)
+# Domain: amazingdeal.co.in
+# ========================================================
+services:
+  - type: web
+    name: amazingdeal-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    region: oregon # or frankfurt / singapore
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: SPRING_PROFILES_ACTIVE
+        value: cloud
+      - key: DATABASE_URL
+        sync: false # Set in Render Dashboard: jdbc:postgresql://ep-xxx.us-east-2.aws.neon.tech/amazingdeal?sslmode=require
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        value: amazingdeal-media

@@ -1,0 +1,22 @@
+# Dependencies & Build Artefacts
+node_modules/
+dist/
+target/
+*.class
+*.jar
+*.war
+
+# Environment & IDE
+.env
+.env.local
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+*.log
+
+# Temp & Artifacts
+temp/
+backend_temp/
+starter.zip
