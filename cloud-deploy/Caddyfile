@@ -1,0 +1,9 @@
+# Automatic HTTPS Reverse Proxy for AmazingDeal on Oracle Cloud VM
+api.amazingdeal.co.in {
+    reverse_proxy backend:8080 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
