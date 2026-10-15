@@ -13,9 +13,9 @@ spring:
   
   # Default Cloud Profile: Neon Serverless Postgres
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://${DB_HOST:ep-bold-pond-123456.us-east-2.aws.neon.tech}:${DB_PORT:5432}/${DB_NAME:amazingdeal}?sslmode=require}
-    username: ${DB_USER:neondb_owner}
-    password: ${DB_PASSWORD:}
+    url: ${DATABASE_URL:jdbc:postgresql://ep-rough-fire-b4tti27m-pooler.c-6.us-east-2.aws.neon.tech:5432/amazingdeal?sslmode=require}
+    username: ${DB_USER:amazingdeal_owner}
+    password: ${DB_PASSWORD:npg_HoOfLN3E4FDG}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:5}
