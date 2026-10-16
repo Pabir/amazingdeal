@@ -21,9 +21,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   pendingCount,
 }) => {
+  const isWorkersDev = typeof window !== 'undefined' && window.location.hostname.includes('workers.dev');
   const storefrontUrl = tenant?.subdomain
-    ? `https://${tenant.subdomain}.amazingdeal.co.in`
+    ? isWorkersDev
+      ? `https://${window.location.hostname.replace('amazingdeal-admin', 'amazingdeal-storefront')}?store=${tenant.subdomain}`
+      : `https://${tenant.subdomain}.amazingdeal.co.in`
     : '#';
+
+  const storefrontDisplay = tenant?.subdomain
+    ? isWorkersDev
+      ? `storefront?store=${tenant.subdomain}`
+      : `${tenant.subdomain}.amazingdeal.co.in`
+    : '';
 
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200">
@@ -51,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   rel="noreferrer"
                   className="text-xs text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center space-x-1 group"
                 >
-                  <span>{tenant.subdomain}.amazingdeal.co.in</span>
+                  <span>{storefrontDisplay}</span>
                   <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                 </a>
               )}

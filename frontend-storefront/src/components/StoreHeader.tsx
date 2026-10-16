@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { StoreInfo } from '../types';
-import { Store, ShoppingBag, Clock, MapPin, ShieldCheck, Truck } from 'lucide-react';
+import { Store, ShoppingBag, Clock, MapPin, ShieldCheck, Truck, ChevronDown, Check } from 'lucide-react';
 
 interface StoreHeaderProps {
   store: StoreInfo | null;
@@ -8,11 +8,36 @@ interface StoreHeaderProps {
   onOpenCart: () => void;
 }
 
+const AVAILABLE_STORES = [
+  { name: 'Gupta Kirana Store', subdomain: 'guptakiranastore', badge: 'Groceries' },
+  { name: 'Patel Brothers Store', subdomain: 'patelbrothers', badge: 'Staples & Dairy' },
+  { name: 'Verma Kirana Stores', subdomain: 'vermakiranastores', badge: 'Daily Essentials' },
+];
+
 export const StoreHeader: React.FC<StoreHeaderProps> = ({
   store,
   totalCartItems,
   onOpenCart,
 }) => {
+  const [storeMenuOpen, setStoreMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setStoreMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const switchStore = (subdomain: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('store', subdomain);
+    window.location.href = url.toString();
+  };
+
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200">
       
@@ -62,22 +87,80 @@ export const StoreHeader: React.FC<StoreHeaderProps> = ({
             </div>
           </div>
 
-          {/* Cart Trigger */}
-          <button
-            onClick={onOpenCart}
-            className="relative flex items-center space-x-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <ShoppingBag className="w-5 h-5" />
-            <span className="hidden sm:inline">My Cart</span>
-            {totalCartItems > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-white text-emerald-800 text-xs font-black shadow-sm">
-                {totalCartItems}
-              </span>
-            )}
-          </button>
+          {/* Right Actions: Store Switcher & Cart */}
+          <div className="flex items-center space-x-3">
+            {/* Store Switcher Dropdown */}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setStoreMenuOpen(!storeMenuOpen)}
+                className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all"
+                title="Switch between active merchants"
+              >
+                <Store className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="hidden md:inline">Browse Stores</span>
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-600 text-white text-[10px]">3</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+              </button>
+
+              {storeMenuOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-3 py-1.5 border-b border-slate-100">
+                    <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
+                      Active Merchants ({AVAILABLE_STORES.length})
+                    </p>
+                  </div>
+                  <div className="py-1">
+                    {AVAILABLE_STORES.map((s) => {
+                      const isCurrent = store?.subdomain?.toLowerCase() === s.subdomain.toLowerCase();
+                      return (
+                        <button
+                          key={s.subdomain}
+                          onClick={() => {
+                            setStoreMenuOpen(false);
+                            switchStore(s.subdomain);
+                          }}
+                          className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between hover:bg-emerald-50 transition-colors ${
+                            isCurrent ? 'bg-emerald-50/70 font-bold text-emerald-900' : 'text-slate-700'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center space-x-1.5">
+                              <span className="font-semibold text-slate-900">{s.name}</span>
+                              {isCurrent && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-normal">
+                              ?store={s.subdomain}
+                            </span>
+                          </div>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
+                            {s.badge}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Cart Trigger */}
+            <button
+              onClick={onOpenCart}
+              className="relative flex items-center space-x-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <ShoppingBag className="w-5 h-5" />
+              <span className="hidden sm:inline">My Cart</span>
+              {totalCartItems > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-white text-emerald-800 text-xs font-black shadow-sm">
+                  {totalCartItems}
+                </span>
+              )}
+            </button>
+          </div>
 
         </div>
       </div>
     </header>
   );
 };
+
