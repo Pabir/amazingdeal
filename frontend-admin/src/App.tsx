@@ -165,26 +165,36 @@ export function App() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    // Load store profile
+    // Load store profile from storage
     const storedName = localStorage.getItem('ad_store_name');
     const storedSubdomain = localStorage.getItem('ad_subdomain');
     const storedTenantId = localStorage.getItem('ad_tenant_id');
+    const storedEmail = localStorage.getItem('ad_owner_email');
+    const storedPhone = localStorage.getItem('ad_owner_phone');
+    const storedVpa = localStorage.getItem('ad_upi_vpa');
 
     setTenant({
       id: storedTenantId || 'tenant-1',
-      storeName: storedName || 'Sharma Kirana Store',
-      subdomain: storedSubdomain || 'sharma',
-      ownerPhone: '9876543210',
-      ownerEmail: 'merchant@amazingdeal.co.in',
+      storeName: storedName || 'My Store',
+      subdomain: storedSubdomain || 'mystore',
+      ownerPhone: storedPhone || '9876543210',
+      ownerEmail: storedEmail || 'merchant@amazingdeal.co.in',
       status: 'ACTIVE',
       storeCategory: 'Groceries',
-      upiVpa: `${storedSubdomain || 'sharma'}@okaxis`,
+      upiVpa: storedVpa || `${storedSubdomain || 'mystore'}@okaxis`,
       deliveryRadiusKm: 5.0,
       deliveryCharge: 30.0,
       freeDeliveryAbove: 499.0,
       minOrderAmount: 0.0,
       storeTimings: '8:00 AM - 10:00 PM',
     });
+
+    // Refresh live profile from server
+    ApiService.getMe()
+      .then((liveTenant) => {
+        if (liveTenant) setTenant(liveTenant);
+      })
+      .catch((e) => console.warn('Could not refresh full tenant profile:', e.message));
 
     loadData();
 
@@ -253,6 +263,21 @@ Deliver To: ${order.deliveryAddress}
     return (
       <AuthModal
         onSuccess={(auth: AuthResponse) => {
+          setTenant({
+            id: auth.tenantId,
+            storeName: auth.storeName,
+            subdomain: auth.subdomain,
+            ownerPhone: auth.ownerPhone,
+            ownerEmail: auth.ownerEmail,
+            status: 'ACTIVE',
+            storeCategory: 'Groceries',
+            upiVpa: auth.upiVpa,
+            deliveryRadiusKm: 5.0,
+            deliveryCharge: 30.0,
+            freeDeliveryAbove: 499.0,
+            minOrderAmount: 0.0,
+            storeTimings: '8:00 AM - 10:00 PM',
+          });
           setIsAuthenticated(true);
         }}
       />

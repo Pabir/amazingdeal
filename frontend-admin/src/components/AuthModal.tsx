@@ -37,20 +37,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
 
     try {
       if (mode === 'REGISTER') {
+        const cleanSubdomain = subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '');
+        if (cleanSubdomain.length < 3) {
+          setError('Subdomain must be at least 3 characters (e.g. sharma).');
+          setLoading(false);
+          return;
+        }
+
         const res = await ApiService.registerStore({
-          storeName,
-          subdomain,
-          ownerPhone,
-          ownerEmail,
+          storeName: storeName.trim(),
+          subdomain: cleanSubdomain,
+          ownerPhone: ownerPhone.trim(),
+          ownerEmail: ownerEmail.trim().toLowerCase(),
           password,
           storeCategory,
-          upiVpa: upiVpa || `${subdomain}@upi`,
+          upiVpa: upiVpa ? upiVpa.trim() : `${cleanSubdomain}@upi`,
         });
         ApiService.setAuth(res);
         onSuccess(res);
       } else {
         const res = await ApiService.login({
-          email: ownerEmail,
+          email: ownerEmail.trim().toLowerCase(),
           password,
         });
         ApiService.setAuth(res);
@@ -133,6 +140,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
                     <input
                       type="text"
                       required
+                      minLength={3}
+                      maxLength={30}
                       value={subdomain}
                       onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                       placeholder="sharmakirana"

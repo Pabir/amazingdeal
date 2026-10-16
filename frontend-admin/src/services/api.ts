@@ -1,6 +1,10 @@
 import { AuthResponse, Order, OrderStats, Product, Tenant } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')
+    ? 'https://amazingdeal-backend.onrender.com'
+    : 'http://localhost:8080');
 
 export class ApiService {
   private static getToken(): string | null {
@@ -16,6 +20,9 @@ export class ApiService {
     localStorage.setItem('ad_tenant_id', auth.tenantId);
     localStorage.setItem('ad_subdomain', auth.subdomain);
     localStorage.setItem('ad_store_name', auth.storeName);
+    localStorage.setItem('ad_owner_email', auth.ownerEmail || '');
+    localStorage.setItem('ad_owner_phone', auth.ownerPhone || '');
+    localStorage.setItem('ad_upi_vpa', auth.upiVpa || '');
   }
 
   public static clearAuth() {
@@ -23,6 +30,9 @@ export class ApiService {
     localStorage.removeItem('ad_tenant_id');
     localStorage.removeItem('ad_subdomain');
     localStorage.removeItem('ad_store_name');
+    localStorage.removeItem('ad_owner_email');
+    localStorage.removeItem('ad_owner_phone');
+    localStorage.removeItem('ad_upi_vpa');
   }
 
   public static isAuthenticated(): boolean {
@@ -55,7 +65,11 @@ export class ApiService {
         let errMessage = `HTTP Error ${response.status}`;
         try {
           const errJson = await response.json();
-          errMessage = errJson.message || errJson.error || JSON.stringify(errJson);
+          if (errJson.details && typeof errJson.details === 'object') {
+            errMessage = Object.values(errJson.details).join(', ');
+          } else {
+            errMessage = errJson.message || errJson.error || JSON.stringify(errJson);
+          }
         } catch {
           // ignore json parse error
         }

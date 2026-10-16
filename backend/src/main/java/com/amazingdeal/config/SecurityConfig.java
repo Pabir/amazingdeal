@@ -57,7 +57,9 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(List.of(
             "https://*.amazingdeal.co.in",
             "https://amazingdeal.co.in",
+            "https://*.workers.dev",
             "https://*.pages.dev",
+            "https://*.onrender.com",
             "http://localhost:*",
             "http://127.0.0.1:*"
         ));
