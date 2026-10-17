@@ -10,6 +10,8 @@ interface CartDrawerProps {
   store: StoreInfo | null;
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onCheckout: () => void;
+  customer?: any;
+  onOpenAuth?: () => void;
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
@@ -20,6 +22,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   store,
   onUpdateQuantity,
   onCheckout,
+  customer,
+  onOpenAuth,
 }) => {
   if (!isOpen) return null;
 
@@ -140,6 +144,19 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <span className="text-emerald-600">₹{grandTotal.toFixed(2)}</span>
               </div>
             </div>
+
+            {!customer && onOpenAuth && (
+              <div className="bg-emerald-50/80 p-2.5 rounded-xl border border-emerald-200/60 flex items-center justify-between text-xs">
+                <span className="text-emerald-900 font-semibold">Sign in for 1-click address checkout</span>
+                <button
+                  type="button"
+                  onClick={onOpenAuth}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-xs"
+                >
+                  Sign In
+                </button>
+              </div>
+            )}
 
             <button
               onClick={onCheckout}

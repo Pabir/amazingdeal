@@ -162,11 +162,11 @@ export const StoreHeader: React.FC<StoreHeaderProps> = ({
             {!customer ? (
               <button
                 onClick={onOpenAuth}
-                className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 transition-all shadow-xs"
-                title="Customer Sign In"
+                className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-extrabold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-all shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                title="Customer Sign In / Register"
               >
-                <User className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden sm:inline">Sign In</span>
+                <User className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Sign In</span>
               </button>
             ) : (
               <div className="relative" ref={customerMenuRef}>

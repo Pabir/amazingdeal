@@ -222,6 +222,11 @@ export function App() {
           setIsCartOpen(false);
           setIsCheckoutOpen(true);
         }}
+        customer={customer}
+        onOpenAuth={() => {
+          setIsCartOpen(false);
+          setIsAuthOpen(true);
+        }}
       />
 
       {/* 1-Step Checkout Modal with Customer & Saved Address support */}
