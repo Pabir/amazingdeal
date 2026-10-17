@@ -23,6 +23,7 @@ public class CreateOrderRequest {
     private String deliveryType = "DELIVERY"; // DELIVERY, PICKUP
     private String paymentMethod = "COD"; // COD, UPI_ONLINE
     private String notes;
+    private java.util.UUID customerId;
 
     @NotEmpty(message = "Order must have at least one product")
     private List<OrderItemDto> items;

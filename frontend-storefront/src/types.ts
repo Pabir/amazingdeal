@@ -56,3 +56,30 @@ export interface OrderResponse {
   upiQrBase64?: string;
   upiVpa?: string;
 }
+
+export interface CustomerAddress {
+  id?: string;
+  label: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  addressLine: string;
+  landmark?: string;
+  city?: string;
+  pincode?: string;
+  isDefault?: boolean;
+}
+
+export interface CustomerProfile {
+  id: string;
+  fullName: string;
+  email?: string;
+  phone?: string;
+  avatarUrl?: string;
+}
+
+export interface CustomerAuthSession {
+  token: string;
+  customer: CustomerProfile;
+  addresses: CustomerAddress[];
+}
+

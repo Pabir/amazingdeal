@@ -13,6 +13,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "orders", indexes = {
     @Index(name = "idx_orders_tenant_id", columnList = "tenant_id"),
+    @Index(name = "idx_orders_customer_id", columnList = "customer_id"),
     @Index(name = "idx_orders_order_number", columnList = "order_number"),
     @Index(name = "idx_orders_created_at", columnList = "created_at")
 })
@@ -26,6 +27,9 @@ public class Order extends TenantAwareEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    @Column(name = "customer_id")
+    private UUID customerId;
 
     @Column(name = "order_number", nullable = false, length = 50)
     private String orderNumber;

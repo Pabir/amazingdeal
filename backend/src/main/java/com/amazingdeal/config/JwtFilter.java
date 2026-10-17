@@ -35,17 +35,28 @@ public class JwtFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7).trim();
             if (jwtTokenProvider.validateToken(token)) {
                 Claims claims = jwtTokenProvider.getClaims(token);
-                String email = claims.getSubject();
+                String subject = claims.getSubject();
                 String role = claims.get("role", String.class);
                 String tenantIdStr = claims.get("tenantId", String.class);
                 String subdomain = claims.get("subdomain", String.class);
+                String customerIdStr = claims.get("customerId", String.class);
 
                 if (tenantIdStr != null) {
-                    UUID tenantId = UUID.fromString(tenantIdStr);
-                    TenantContext.setTenantId(tenantId);
+                    try {
+                        UUID tenantId = UUID.fromString(tenantIdStr);
+                        TenantContext.setTenantId(tenantId);
+                    } catch (Exception ignored) {}
                 }
                 if (subdomain != null) {
                     TenantContext.setSubdomain(subdomain);
+                }
+                if (customerIdStr != null) {
+                    try {
+                        UUID customerId = UUID.fromString(customerIdStr);
+                        com.amazingdeal.multitenancy.CustomerContext.setCustomerId(customerId);
+                        com.amazingdeal.multitenancy.CustomerContext.setEmail(claims.get("email", String.class));
+                        com.amazingdeal.multitenancy.CustomerContext.setPhone(claims.get("phone", String.class));
+                    } catch (Exception ignored) {}
                 }
 
                 List<SimpleGrantedAuthority> authorities = List.of(
@@ -53,11 +64,15 @@ public class JwtFilter extends OncePerRequestFilter {
                 );
 
                 UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(email, null, authorities);
+                    new UsernamePasswordAuthenticationToken(subject, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
 
-        filterChain.doFilter(request, response);
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            com.amazingdeal.multitenancy.CustomerContext.clear();
+        }
     }
 }

@@ -40,6 +40,25 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    public String generateCustomerToken(UUID customerId, String email, String phone, String fullName) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + (expirationMs * 30)); // 30 days customer session
+
+        String subject = (email != null && !email.isBlank()) ? email : (phone != null ? phone : customerId.toString());
+
+        return Jwts.builder()
+                .subject(subject)
+                .claim("customerId", customerId.toString())
+                .claim("fullName", fullName != null ? fullName : "Customer")
+                .claim("email", email)
+                .claim("phone", phone)
+                .claim("role", "ROLE_CUSTOMER")
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(key)
+                .compact();
+    }
+
     public boolean validateToken(String token) {
         try {
             Jwts.parser().verifyWith(key).build().parseSignedClaims(token);

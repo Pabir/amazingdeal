@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSubdomain } from './hooks/useSubdomain';
 import { useCart } from './hooks/useCart';
+import { useCustomerAuth } from './hooks/useCustomerAuth';
 import { StoreApi } from './services/storeApi';
 import { StoreInfo, Product, OrderResponse } from './types';
 import { StoreHeader } from './components/StoreHeader';
@@ -8,7 +9,10 @@ import { ProductCard } from './components/ProductCard';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { OrderSuccessModal } from './components/OrderSuccessModal';
-import { Search, ShoppingBag, ArrowRight, Sparkles } from 'lucide-react';
+import { CustomerAuthModal } from './components/CustomerAuthModal';
+import { MyOrdersModal } from './components/MyOrdersModal';
+import { SavedAddressesModal } from './components/SavedAddressesModal';
+import { Search, ShoppingBag, ArrowRight } from 'lucide-react';
 
 export function App() {
   const subdomain = useSubdomain();
@@ -18,7 +22,26 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Cart & Modals
+  // Customer Authentication Hook
+  const {
+    customer,
+    token,
+    addresses,
+    loading: authLoading,
+    error: authError,
+    loginWithGoogle,
+    loginWithEmail,
+    logout,
+    saveAddress,
+    deleteAddress,
+  } = useCustomerAuth();
+
+  // Modals
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
+  const [isOrdersOpen, setIsOrdersOpen] = useState<boolean>(false);
+  const [isAddressesOpen, setIsAddressesOpen] = useState<boolean>(false);
+
+  // Cart & Orders
   const {
     items: cartItems,
     addToCart,
@@ -56,7 +79,8 @@ export function App() {
 
   const filteredProducts = products.filter((p) => {
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-    const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch =
+      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
@@ -76,19 +100,32 @@ export function App() {
     }
   };
 
+  const handleReorder = (orderItems: any[]) => {
+    orderItems.forEach((item) => {
+      const match = products.find((p) => p.id === item.productId || p.title === item.title);
+      if (match) {
+        addToCart(match);
+      }
+    });
+    setIsCartOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-24">
-      
-      {/* Storefront Header */}
+      {/* Storefront Header with Customer Profile / Sign In */}
       <StoreHeader
         store={store}
         totalCartItems={totalCartItems}
         onOpenCart={() => setIsCartOpen(true)}
+        customer={customer}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenOrders={() => setIsOrdersOpen(true)}
+        onOpenAddresses={() => setIsAddressesOpen(true)}
+        onLogout={logout}
       />
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
-        
         {/* Search & Category Tabs */}
         <div className="space-y-3">
           <div className="relative max-w-lg mx-auto sm:mx-0">
@@ -150,7 +187,6 @@ export function App() {
             })}
           </div>
         )}
-
       </main>
 
       {/* Mobile Floating Cart Summary Bar */}
@@ -188,7 +224,7 @@ export function App() {
         }}
       />
 
-      {/* 1-Step Checkout Modal */}
+      {/* 1-Step Checkout Modal with Customer & Saved Address support */}
       <CheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
@@ -197,14 +233,42 @@ export function App() {
         store={store}
         onPlaceOrder={handlePlaceOrder}
         loading={placingOrder}
+        customer={customer}
+        addresses={addresses}
+        onSaveAddress={saveAddress}
+        onOpenAuth={() => setIsAuthOpen(true)}
+      />
+
+      {/* Customer Login / Signup Modal */}
+      <CustomerAuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onGoogleLogin={loginWithGoogle}
+        onEmailLogin={loginWithEmail}
+        loading={authLoading}
+        error={authError}
+      />
+
+      {/* Customer Order History & Tracking Modal */}
+      <MyOrdersModal
+        isOpen={isOrdersOpen}
+        onClose={() => setIsOrdersOpen(false)}
+        token={token}
+        subdomain={subdomain}
+        onReorder={handleReorder}
+      />
+
+      {/* Saved Addresses Modal */}
+      <SavedAddressesModal
+        isOpen={isAddressesOpen}
+        onClose={() => setIsAddressesOpen(false)}
+        addresses={addresses}
+        onSaveAddress={saveAddress}
+        onDeleteAddress={deleteAddress}
       />
 
       {/* Order Confirmed / UPI QR Modal */}
-      <OrderSuccessModal
-        order={confirmedOrder}
-        onClose={() => setConfirmedOrder(null)}
-      />
-
+      <OrderSuccessModal order={confirmedOrder} onClose={() => setConfirmedOrder(null)} />
     </div>
   );
 }

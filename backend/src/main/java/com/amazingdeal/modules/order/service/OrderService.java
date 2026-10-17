@@ -111,7 +111,13 @@ public class OrderService {
         String paymentMethod = request.getPaymentMethod() != null ? request.getPaymentMethod().toUpperCase() : "COD";
         String initialPaymentStatus = "COD".equalsIgnoreCase(paymentMethod) ? "PENDING" : "PENDING";
 
+        UUID customerId = request.getCustomerId();
+        if (customerId == null) {
+            customerId = com.amazingdeal.multitenancy.CustomerContext.getCustomerId();
+        }
+
         Order order = Order.builder()
+                .customerId(customerId)
                 .orderNumber(orderNumber)
                 .customerName(request.getCustomerName().trim())
                 .customerPhone(request.getCustomerPhone().trim())
@@ -246,10 +252,32 @@ public class OrderService {
         return sb.toString();
     }
 
+    @Transactional(readOnly = true)
+    public List<OrderResponseDto> getOrdersForCustomer(UUID customerId, UUID optionalTenantId) {
+        List<Order> orders;
+        if (optionalTenantId != null) {
+            orders = orderRepository.findByTenantIdAndCustomerIdOrderByCreatedAtDesc(optionalTenantId, customerId);
+        } else {
+            orders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+        }
+
+        Map<UUID, String> storeNameCache = new HashMap<>();
+
+        return orders.stream().map(o -> {
+            String storeName = storeNameCache.computeIfAbsent(o.getTenantId(), tid -> {
+                return tenantRepository.findById(tid)
+                        .map(Tenant::getStoreName)
+                        .orElse("Store");
+            });
+            return mapToDto(o, storeName, parseItems(o.getItemsJson()));
+        }).toList();
+    }
+
     private OrderResponseDto mapToDto(Order o, String storeName, List<OrderItemDto> items) {
         return OrderResponseDto.builder()
                 .id(o.getId())
                 .tenantId(o.getTenantId())
+                .customerId(o.getCustomerId())
                 .orderNumber(o.getOrderNumber())
                 .storeName(storeName)
                 .customerName(o.getCustomerName())

@@ -23,6 +23,9 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     Optional<Order> findByTenantIdAndOrderNumber(UUID tenantId, String orderNumber);
     Optional<Order> findByOrderNumber(String orderNumber);
 
+    List<Order> findByCustomerIdOrderByCreatedAtDesc(UUID customerId);
+    List<Order> findByTenantIdAndCustomerIdOrderByCreatedAtDesc(UUID tenantId, UUID customerId);
+
     long countByTenantId(UUID tenantId);
     long countByTenantIdAndOrderStatus(UUID tenantId, String orderStatus);
 
