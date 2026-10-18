@@ -52,13 +52,11 @@ jobs:
           VITE_API_URL: https://api.amazingdeal.co.in
 
       - name: Deploy to Cloudflare Pages (admin.amazingdeal.co.in)
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: 'amazingdeal-admin'
-          directory: 'frontend-admin/dist'
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          command: pages deploy frontend-admin/dist --project-name=amazingdeal-admin
 
   # 3. Build and deploy Storefront with Wildcard Routing to Cloudflare Pages
   deploy-storefront:
@@ -85,10 +83,8 @@ jobs:
           VITE_API_URL: https://api.amazingdeal.co.in
 
       - name: Deploy to Cloudflare Pages (*.amazingdeal.co.in)
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: 'amazingdeal-storefront'
-          directory: 'frontend-storefront/dist'
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          command: pages deploy frontend-storefront/dist --project-name=amazingdeal-storefront
