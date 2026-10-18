@@ -1021,16 +1021,16 @@ export function MerchantLandingPage() {
                       </form>
                     )}
 
-                    {/* Developer Sandbox Testing Quick Bypass */}
+                    {/* PayU Live Gateway Info */}
                     <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center">
                       <div className="text-[11px] text-slate-400 mb-2">
-                        Sandbox / Test Mode Key: <span className="text-emerald-400 font-mono">uiw0jf</span>
+                        PayU Production Gateway | Merchant Key: <span className="text-emerald-400 font-mono">uiw0jf</span>
                       </div>
                       <button
                         onClick={handleSimulatePaymentSuccess}
                         className="text-xs text-emerald-400 hover:text-emerald-300 underline font-semibold"
                       >
-                        ⚡ Simulate Instant Test Payment Success
+                        ⚡ Simulate Instant Payment Success
                       </button>
                     </div>
                   </div>

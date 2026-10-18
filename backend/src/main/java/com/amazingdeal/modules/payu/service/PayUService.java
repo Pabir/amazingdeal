@@ -25,7 +25,7 @@ public class PayUService {
     @Value("${app.payu.salt:saPx7EYtKYEEgOuBSjyoVvrncKIjZ2LJ}")
     private String salt;
 
-    @Value("${app.payu.mode:test}")
+    @Value("${app.payu.mode:production}")
     private String mode;
 
     @Value("${app.payu.surl:https://api.amazingdeal.co.in/api/v1/payu/callback}")
@@ -63,9 +63,9 @@ public class PayUService {
                 key, txnid, formattedAmount, productInfo, firstname, email, udf1, udf2, udf3, udf4, udf5, salt);
 
         String hash = sha512(hashString);
-        String actionUrl = ("secure".equalsIgnoreCase(mode) || "production".equalsIgnoreCase(mode))
-                ? SECURE_PAYMENT_URL
-                : TEST_PAYMENT_URL;
+        String actionUrl = ("test".equalsIgnoreCase(mode) || "sandbox".equalsIgnoreCase(mode))
+                ? TEST_PAYMENT_URL
+                : SECURE_PAYMENT_URL;
 
         log.info("Initiated PayU payment for txnid: {}, plan: {}, amount: {}, mode: {}, callback: {}",
                 txnid, udf1, formattedAmount, mode, surlToUse);

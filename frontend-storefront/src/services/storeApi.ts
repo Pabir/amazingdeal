@@ -225,7 +225,7 @@ export class StoreApi {
     const txnid = 'AD_' + Date.now();
     const callbackUrl = `${API_BASE}/api/v1/payu/callback`;
     return {
-      actionUrl: 'https://test.payu.in/_payment',
+      actionUrl: 'https://secure.payu.in/_payment',
       key: 'uiw0jf',
       txnid,
       amount: data.amount.toFixed(2),
