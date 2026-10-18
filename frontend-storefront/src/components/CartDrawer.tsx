@@ -1,5 +1,5 @@
 import React from 'react';
-import { CartItem, StoreInfo } from '../types';
+import { CartItem, StoreInfo, Product } from '../types';
 import { X, Plus, Minus, ShoppingBag, ArrowRight, Truck } from 'lucide-react';
 
 interface CartDrawerProps {
@@ -12,6 +12,7 @@ interface CartDrawerProps {
   onCheckout: () => void;
   customer?: any;
   onOpenAuth?: () => void;
+  onProductClick?: (product: Product) => void;
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
@@ -24,6 +25,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onCheckout,
   customer,
   onOpenAuth,
+  onProductClick,
 }) => {
   if (!isOpen) return null;
 
@@ -92,15 +94,25 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 key={product.id}
                 className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 space-x-3"
               >
-                <img
-                  src={product.imageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80'}
-                  alt={product.title}
-                  className="w-14 h-14 rounded-xl object-cover border border-slate-200 flex-shrink-0"
-                />
+                <div
+                  onClick={() => {
+                    onClose();
+                    onProductClick?.(product);
+                  }}
+                  className="flex items-center space-x-3 flex-1 min-w-0 cursor-pointer group"
+                >
+                  <img
+                    src={product.imageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80'}
+                    alt={product.title}
+                    className="w-14 h-14 rounded-xl object-cover border border-slate-200 flex-shrink-0 group-hover:opacity-85 transition-opacity"
+                  />
 
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-bold text-slate-900 truncate">{product.title}</h4>
-                  <span className="text-xs font-black text-slate-700">₹{product.price.toFixed(2)}</span>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-bold text-slate-900 truncate group-hover:text-emerald-700 transition-colors">
+                      {product.title}
+                    </h4>
+                    <span className="text-xs font-black text-slate-700">₹{product.price.toFixed(2)}</span>
+                  </div>
                 </div>
 
                 {/* Stepper */}

@@ -6,6 +6,7 @@ import { StoreApi } from './services/storeApi';
 import { StoreInfo, Product, OrderResponse } from './types';
 import { StoreHeader } from './components/StoreHeader';
 import { ProductCard } from './components/ProductCard';
+import { ProductDetailsModal } from './components/ProductDetailsModal';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { OrderSuccessModal } from './components/OrderSuccessModal';
@@ -21,6 +22,10 @@ export function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Product Details Modal state
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductDetailsOpen, setIsProductDetailsOpen] = useState<boolean>(false);
 
   // Customer Authentication Hook
   const {
@@ -74,6 +79,78 @@ export function App() {
     }
     loadStoreData();
   }, [subdomain]);
+
+  // Open product details modal and sync with URL (?product=id)
+  const handleOpenProductDetails = (product: Product) => {
+    setSelectedProduct(product);
+    setIsProductDetailsOpen(true);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('product', product.id);
+      window.history.pushState({ productId: product.id }, '', url.toString());
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  // Close product details modal and remove param from URL
+  const handleCloseProductDetails = () => {
+    setIsProductDetailsOpen(false);
+    setSelectedProduct(null);
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('product')) {
+        url.searchParams.delete('product');
+        window.history.pushState({}, '', url.toString());
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  // Handle browser back/forward buttons (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const prodId = urlParams.get('product');
+        if (prodId && products.length > 0) {
+          const match = products.find((p) => p.id === prodId);
+          if (match) {
+            setSelectedProduct(match);
+            setIsProductDetailsOpen(true);
+            return;
+          }
+        }
+        setIsProductDetailsOpen(false);
+        setSelectedProduct(null);
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [products]);
+
+  // Check URL on initial product load
+  useEffect(() => {
+    if (products.length > 0) {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const prodId = urlParams.get('product');
+        if (prodId) {
+          const match = products.find((p) => p.id === prodId);
+          if (match) {
+            setSelectedProduct(match);
+            setIsProductDetailsOpen(true);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [products]);
 
   const categories = ['All', ...Array.from(new Set(products.map((p) => p.category).filter(Boolean) as string[]))];
 
@@ -182,6 +259,7 @@ export function App() {
                   quantityInCart={inCart}
                   onAddToCart={addToCart}
                   onUpdateQuantity={updateQuantity}
+                  onProductClick={handleOpenProductDetails}
                 />
               );
             })}
@@ -210,6 +288,25 @@ export function App() {
         </div>
       )}
 
+      {/* Product Details Modal / Bottom Sheet */}
+      <ProductDetailsModal
+        product={selectedProduct}
+        isOpen={isProductDetailsOpen}
+        onClose={handleCloseProductDetails}
+        quantityInCart={
+          selectedProduct
+            ? cartItems.find((i) => i.product.id === selectedProduct.id)?.quantity || 0
+            : 0
+        }
+        onAddToCart={addToCart}
+        onUpdateQuantity={updateQuantity}
+        store={store}
+        onViewCart={() => {
+          setIsProductDetailsOpen(false);
+          setIsCartOpen(true);
+        }}
+      />
+
       {/* Cart Drawer */}
       <CartDrawer
         isOpen={isCartOpen}
@@ -227,6 +324,7 @@ export function App() {
           setIsCartOpen(false);
           setIsAuthOpen(true);
         }}
+        onProductClick={handleOpenProductDetails}
       />
 
       {/* 1-Step Checkout Modal with Customer & Saved Address support */}
