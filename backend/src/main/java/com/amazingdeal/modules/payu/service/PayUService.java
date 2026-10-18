@@ -28,10 +28,10 @@ public class PayUService {
     @Value("${app.payu.mode:production}")
     private String mode;
 
-    @Value("${app.payu.surl:https://api.amazingdeal.co.in/api/v1/payu/callback}")
+    @Value("${app.payu.surl:https://amazingdeal-backend.onrender.com/api/v1/payu/callback}")
     private String defaultSurl;
 
-    @Value("${app.payu.furl:https://api.amazingdeal.co.in/api/v1/payu/callback}")
+    @Value("${app.payu.furl:https://amazingdeal-backend.onrender.com/api/v1/payu/callback}")
     private String defaultFurl;
 
     private static final String TEST_PAYMENT_URL = "https://test.payu.in/_payment";

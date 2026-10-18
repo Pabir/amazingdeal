@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles,
   CheckCircle,
@@ -121,6 +121,7 @@ export function MerchantLandingPage() {
   // Step 2: Payment
   const [paymentMethod, setPaymentMethod] = useState<'PAYU' | 'UPI_QR'>('PAYU');
   const [payuLoading, setPayuLoading] = useState<boolean>(false);
+  const isSubmittingPayURef = useRef<boolean>(false);
   const [payuData, setPayuData] = useState<any>(null);
   const [paymentVerified, setPaymentVerified] = useState<boolean>(false);
   const [paymentRef, setPaymentRef] = useState<string>('');
@@ -260,7 +261,12 @@ export function MerchantLandingPage() {
   };
 
   const handleInitiatePayU = async () => {
+    if (isSubmittingPayURef.current || payuLoading) {
+      return;
+    }
+
     try {
+      isSubmittingPayURef.current = true;
       setPayuLoading(true);
       setErrorMsg('');
 
@@ -298,8 +304,9 @@ export function MerchantLandingPage() {
         if (form) {
           form.submit();
         }
-      }, 600);
+      }, 500);
     } catch (e: any) {
+      isSubmittingPayURef.current = false;
       setErrorMsg(e.message || 'Failed to initialize PayU payment');
       setPayuLoading(false);
     }
