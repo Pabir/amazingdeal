@@ -69,8 +69,9 @@ app:
     key: ${PAYU_KEY:uiw0jf}
     salt: ${PAYU_SALT:saPx7EYtKYEEgOuBSjyoVvrncKIjZ2LJ}
     mode: ${PAYU_MODE:test}
-    surl: ${PAYU_SURL:https://amazingdeal-storefront.drskpabirulislam1995.workers.dev/payu-callback}
-    furl: ${PAYU_FURL:https://amazingdeal-storefront.drskpabirulislam1995.workers.dev/payu-callback}
+    surl: ${PAYU_SURL:https://api.amazingdeal.co.in/api/v1/payu/callback}
+    furl: ${PAYU_FURL:https://api.amazingdeal.co.in/api/v1/payu/callback}
+    frontend-url: ${PAYU_FRONTEND_URL:https://amazingdeal-storefront.drskpabirulislam1995.workers.dev}
 
 management:
   endpoints:

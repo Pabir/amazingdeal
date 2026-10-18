@@ -34,4 +34,7 @@ public class PayUInitiateRequest {
 
     private String subdomain; // target store subdomain / slug
     private String storeName;
+    private String returnUrl; // frontend return URL (stored in udf4 for redirect after callback)
+    private String surl;      // optional custom surl
+    private String furl;      // optional custom furl
 }

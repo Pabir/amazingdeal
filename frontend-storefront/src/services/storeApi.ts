@@ -200,12 +200,19 @@ export class StoreApi {
     phone: string;
     subdomain?: string;
     storeName?: string;
+    returnUrl?: string;
   }): Promise<any> {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const payload = {
+      ...data,
+      returnUrl: data.returnUrl || origin,
+    };
+
     try {
       const res = await fetch(`${API_BASE}/api/v1/payu/initiate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         return await res.json();
@@ -216,6 +223,7 @@ export class StoreApi {
 
     // Client-side fallback if backend is momentarily unreachable
     const txnid = 'AD_' + Date.now();
+    const callbackUrl = `${API_BASE}/api/v1/payu/callback`;
     return {
       actionUrl: 'https://test.payu.in/_payment',
       key: 'uiw0jf',
@@ -225,12 +233,14 @@ export class StoreApi {
       firstname: data.firstname,
       email: data.email,
       phone: data.phone,
-      surl: window.location.origin + '/payu-callback',
-      furl: window.location.origin + '/payu-callback',
+      surl: callbackUrl,
+      furl: callbackUrl,
       hash: 'SIMULATED_TEST_HASH',
       udf1: data.planId,
       udf2: data.subdomain || '',
       udf3: data.storeName || '',
+      udf4: data.returnUrl || origin,
+      udf5: '',
     };
   }
 

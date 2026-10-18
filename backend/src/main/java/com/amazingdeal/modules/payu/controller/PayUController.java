@@ -29,8 +29,8 @@ public class PayUController {
 
     private final PayUService payUService;
 
-    @Value("${app.payu.surl:https://amazingdeal-storefront.drskpabirulislam1995.workers.dev}")
-    private String storefrontReturnUrl;
+    @Value("${app.payu.frontend-url:${app.payu.surl:https://amazingdeal-storefront.drskpabirulislam1995.workers.dev}}")
+    private String defaultStorefrontUrl;
 
     @PostMapping("/initiate")
     public ResponseEntity<PayUInitiateResponse> initiate(@Valid @RequestBody PayUInitiateRequest request) {
@@ -45,9 +45,9 @@ public class PayUController {
     }
 
     /**
-     * Handles PayU form POST redirect callback (surl / furl)
+     * Handles PayU form POST or GET redirect callback (surl / furl)
      */
-    @PostMapping("/callback")
+    @RequestMapping(value = "/callback", method = {RequestMethod.POST, RequestMethod.GET})
     public void handlePayUCallback(HttpServletRequest request, HttpServletResponse response) throws IOException {
         Map<String, String> params = new HashMap<>();
         Enumeration<String> parameterNames = request.getParameterNames();
@@ -61,25 +61,36 @@ public class PayUController {
         String amount = params.getOrDefault("amount", "");
         String planId = params.getOrDefault("udf1", "MONTHLY");
         String subdomain = params.getOrDefault("udf2", "");
+        String storeName = params.getOrDefault("udf3", "");
+        String clientOrigin = params.getOrDefault("udf4", "");
         String hash = params.getOrDefault("hash", "");
 
-        log.info("Received PayU callback: status={}, txnid={}, plan={}, subdomain={}", status, txnid, planId, subdomain);
+        log.info("Received PayU callback: status={}, txnid={}, plan={}, subdomain={}, origin={}",
+                status, txnid, planId, subdomain, clientOrigin);
 
-        // Redirect back to storefront onboarding with parameters
-        StringBuilder redirectUrl = new StringBuilder();
-        if (storefrontReturnUrl.contains("/payu-callback")) {
-            redirectUrl.append(storefrontReturnUrl.replace("/payu-callback", ""));
-        } else {
-            redirectUrl.append(storefrontReturnUrl);
+        // Determine destination storefront URL (prefer client origin passed during initiate)
+        String targetBase = (clientOrigin != null && !clientOrigin.isBlank())
+                ? clientOrigin.trim()
+                : defaultStorefrontUrl;
+
+        // Clean up redundant /payu-callback or trailing slash if present
+        if (targetBase.contains("/payu-callback")) {
+            targetBase = targetBase.replace("/payu-callback", "");
+        }
+        if (targetBase.endsWith("/")) {
+            targetBase = targetBase.substring(0, targetBase.length() - 1);
         }
 
-        redirectUrl.append("?payu_status=").append(URLEncoder.encode(status, StandardCharsets.UTF_8))
+        StringBuilder redirectUrl = new StringBuilder(targetBase);
+        redirectUrl.append("/?payu_status=").append(URLEncoder.encode(status, StandardCharsets.UTF_8))
                 .append("&txnid=").append(URLEncoder.encode(txnid, StandardCharsets.UTF_8))
                 .append("&amount=").append(URLEncoder.encode(amount, StandardCharsets.UTF_8))
                 .append("&plan=").append(URLEncoder.encode(planId, StandardCharsets.UTF_8))
                 .append("&subdomain=").append(URLEncoder.encode(subdomain, StandardCharsets.UTF_8))
+                .append("&storeName=").append(URLEncoder.encode(storeName, StandardCharsets.UTF_8))
                 .append("&hash=").append(URLEncoder.encode(hash, StandardCharsets.UTF_8));
 
+        log.info("Redirecting browser to storefront: {}", redirectUrl);
         response.sendRedirect(redirectUrl.toString());
     }
 }

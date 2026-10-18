@@ -28,11 +28,11 @@ public class PayUService {
     @Value("${app.payu.mode:test}")
     private String mode;
 
-    @Value("${app.payu.surl:https://amazingdeal-storefront.drskpabirulislam1995.workers.dev/payu-callback}")
-    private String surl;
+    @Value("${app.payu.surl:https://api.amazingdeal.co.in/api/v1/payu/callback}")
+    private String defaultSurl;
 
-    @Value("${app.payu.furl:https://amazingdeal-storefront.drskpabirulislam1995.workers.dev/payu-callback}")
-    private String furl;
+    @Value("${app.payu.furl:https://api.amazingdeal.co.in/api/v1/payu/callback}")
+    private String defaultFurl;
 
     private static final String TEST_PAYMENT_URL = "https://test.payu.in/_payment";
     private static final String SECURE_PAYMENT_URL = "https://secure.payu.in/_payment";
@@ -48,8 +48,15 @@ public class PayUService {
         String udf1 = request.getPlanId() != null ? request.getPlanId().trim().toUpperCase() : "MONTHLY";
         String udf2 = request.getSubdomain() != null ? request.getSubdomain().trim().toLowerCase() : "";
         String udf3 = request.getStoreName() != null ? request.getStoreName().trim() : "";
-        String udf4 = "";
+        String udf4 = request.getReturnUrl() != null ? request.getReturnUrl().trim() : "";
         String udf5 = "";
+
+        String surlToUse = (request.getSurl() != null && !request.getSurl().isBlank())
+                ? request.getSurl().trim()
+                : this.defaultSurl;
+        String furlToUse = (request.getFurl() != null && !request.getFurl().isBlank())
+                ? request.getFurl().trim()
+                : this.defaultFurl;
 
         // Sequence: key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||salt
         String hashString = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s||||||%s",
@@ -60,7 +67,8 @@ public class PayUService {
                 ? SECURE_PAYMENT_URL
                 : TEST_PAYMENT_URL;
 
-        log.info("Initiated PayU payment for txnid: {}, plan: {}, amount: {}, mode: {}", txnid, udf1, formattedAmount, mode);
+        log.info("Initiated PayU payment for txnid: {}, plan: {}, amount: {}, mode: {}, callback: {}",
+                txnid, udf1, formattedAmount, mode, surlToUse);
 
         return PayUInitiateResponse.builder()
                 .actionUrl(actionUrl)
@@ -71,8 +79,8 @@ public class PayUService {
                 .firstname(firstname)
                 .email(email)
                 .phone(phone)
-                .surl(surl)
-                .furl(furl)
+                .surl(surlToUse)
+                .furl(furlToUse)
                 .hash(hash)
                 .udf1(udf1)
                 .udf2(udf2)

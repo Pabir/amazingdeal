@@ -183,8 +183,28 @@ export function MerchantLandingPage() {
     const txnid = params.get('txnid');
     const plan = params.get('plan') as SubscriptionPlanId | null;
     const sub = params.get('subdomain');
+    const store = params.get('storeName');
 
     if (payuStatus && txnid) {
+      // Restore merchant draft inputs from sessionStorage
+      try {
+        const draftStr = sessionStorage.getItem('amazingdeal_merchant_draft');
+        if (draftStr) {
+          const draft = JSON.parse(draftStr);
+          if (draft.merchantName) setMerchantName(draft.merchantName);
+          if (draft.ownerEmail) setOwnerEmail(draft.ownerEmail);
+          if (draft.ownerPhone) setOwnerPhone(draft.ownerPhone);
+          if (draft.storeName) setStoreName(draft.storeName);
+          if (draft.subdomain) setSubdomain(draft.subdomain);
+          if (draft.selectedPlanId) {
+            const foundPlan = PLANS.find((p) => p.id === draft.selectedPlanId);
+            if (foundPlan) setSelectedPlan(foundPlan);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed restoring onboarding draft:', err);
+      }
+
       if (payuStatus === 'success') {
         setPaymentVerified(true);
         setPaymentRef(txnid);
@@ -195,12 +215,22 @@ export function MerchantLandingPage() {
         if (sub) {
           setSubdomain(sub);
         }
+        if (store) {
+          setStoreName(store);
+        }
         setStep('STORE_SETUP');
         setIsModalOpen(true);
       } else {
-        setErrorMsg('PayU transaction was not completed. Please try again.');
+        setErrorMsg('PayU transaction was not completed or was cancelled. Please try again.');
         setIsModalOpen(true);
         setStep('PAYMENT');
+      }
+
+      // Clean URL params cleanly without reloading page
+      try {
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch (e) {
+        // ignore
       }
     }
   }, []);
@@ -234,6 +264,20 @@ export function MerchantLandingPage() {
       setPayuLoading(true);
       setErrorMsg('');
 
+      // Save onboarding form draft into sessionStorage so it survives the PayU page redirection
+      try {
+        sessionStorage.setItem('amazingdeal_merchant_draft', JSON.stringify({
+          merchantName,
+          ownerEmail,
+          ownerPhone,
+          storeName,
+          subdomain,
+          selectedPlanId: selectedPlan.id,
+        }));
+      } catch (err) {
+        console.warn('Failed saving onboarding draft:', err);
+      }
+
       const res = await StoreApi.initiatePayU({
         planId: selectedPlan.id,
         amount: selectedPlan.price,
@@ -242,6 +286,7 @@ export function MerchantLandingPage() {
         phone: ownerPhone,
         subdomain,
         storeName,
+        returnUrl: window.location.origin,
       });
 
       setPayuData(res);
@@ -971,6 +1016,8 @@ export function MerchantLandingPage() {
                         <input type="hidden" name="udf1" value={payuData.udf1} />
                         <input type="hidden" name="udf2" value={payuData.udf2} />
                         <input type="hidden" name="udf3" value={payuData.udf3} />
+                        <input type="hidden" name="udf4" value={payuData.udf4 || window.location.origin} />
+                        <input type="hidden" name="udf5" value={payuData.udf5 || ''} />
                       </form>
                     )}
 
