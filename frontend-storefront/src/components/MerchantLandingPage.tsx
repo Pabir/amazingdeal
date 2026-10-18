@@ -22,6 +22,7 @@ import {
   X,
   Loader2,
   Lock,
+  RefreshCw,
 } from 'lucide-react';
 import { StoreApi } from '../services/storeApi';
 import { SubscriptionPlan, SubscriptionPlanId, MerchantAuthResponse } from '../types';
@@ -118,11 +119,14 @@ export function MerchantLandingPage() {
     message?: string;
   }>({ checking: false });
 
-  // Step 2: Payment
-  const [paymentMethod, setPaymentMethod] = useState<'PAYU' | 'UPI_QR'>('PAYU');
-  const [payuLoading, setPayuLoading] = useState<boolean>(false);
-  const isSubmittingPayURef = useRef<boolean>(false);
-  const [payuData, setPayuData] = useState<any>(null);
+  // Step 2: YouPI Sovereign Gateway Payment
+  const [paymentMethod, setPaymentMethod] = useState<'YOUPI_UPI' | 'UPI_QR'>('YOUPI_UPI');
+  const [youpiLoading, setYoupiLoading] = useState<boolean>(false);
+  const [youpiData, setYoupiData] = useState<any>(null);
+  const [youpiOrderId, setYoupiOrderId] = useState<string>('');
+  const [youpiTimeLeft, setYoupiTimeLeft] = useState<number>(300); // 5 minutes
+  const [youpiUtrInput, setYoupiUtrInput] = useState<string>('');
+  const [verifyingUtr, setVerifyingUtr] = useState<boolean>(false);
   const [paymentVerified, setPaymentVerified] = useState<boolean>(false);
   const [paymentRef, setPaymentRef] = useState<string>('');
 
@@ -260,31 +264,12 @@ export function MerchantLandingPage() {
     setStep('PAYMENT');
   };
 
-  const handleInitiatePayU = async () => {
-    if (isSubmittingPayURef.current || payuLoading) {
-      return;
-    }
-
+  // Initiate YouPI Dynamic Payment Session
+  const handleInitiateYoupi = async () => {
     try {
-      isSubmittingPayURef.current = true;
-      setPayuLoading(true);
+      setYoupiLoading(true);
       setErrorMsg('');
-
-      // Save onboarding form draft into sessionStorage so it survives the PayU page redirection
-      try {
-        sessionStorage.setItem('amazingdeal_merchant_draft', JSON.stringify({
-          merchantName,
-          ownerEmail,
-          ownerPhone,
-          storeName,
-          subdomain,
-          selectedPlanId: selectedPlan.id,
-        }));
-      } catch (err) {
-        console.warn('Failed saving onboarding draft:', err);
-      }
-
-      const res = await StoreApi.initiatePayU({
+      const res = await StoreApi.initiateYoupi({
         planId: selectedPlan.id,
         amount: selectedPlan.price,
         firstname: merchantName,
@@ -295,27 +280,81 @@ export function MerchantLandingPage() {
         returnUrl: window.location.origin,
       });
 
-      setPayuData(res);
-      setPaymentRef(res.txnid);
-
-      // Auto-submit form to PayU gateway
-      setTimeout(() => {
-        const form = document.getElementById('payu-checkout-form') as HTMLFormElement;
-        if (form) {
-          form.submit();
-        }
-      }, 500);
+      setYoupiData(res);
+      setYoupiOrderId(res.orderId);
+      setPaymentRef(res.orderId);
+      setYoupiTimeLeft(300);
     } catch (e: any) {
-      isSubmittingPayURef.current = false;
-      setErrorMsg(e.message || 'Failed to initialize PayU payment');
-      setPayuLoading(false);
+      setErrorMsg(e.message || 'Failed to initialize YouPI payment session');
+    } finally {
+      setYoupiLoading(false);
     }
   };
 
-  // Simulated instant test payment confirmation (for immediate testing in dev/sandbox)
+  // Auto-initiate YouPI payment session when reaching PAYMENT step
+  useEffect(() => {
+    if (step === 'PAYMENT' && isModalOpen && !youpiData && !youpiLoading && !paymentVerified) {
+      handleInitiateYoupi();
+    }
+  }, [step, isModalOpen]);
+
+  // Countdown timer for YouPI session
+  useEffect(() => {
+    if (step !== 'PAYMENT' || !youpiOrderId || paymentVerified || youpiTimeLeft <= 0) return;
+    const timer = setInterval(() => {
+      setYoupiTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [step, youpiOrderId, paymentVerified, youpiTimeLeft]);
+
+  // Real-time status polling for YouPI payment confirmation from Banking Observer
+  useEffect(() => {
+    if (step !== 'PAYMENT' || !youpiOrderId || paymentVerified) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await StoreApi.checkYoupiStatus(youpiOrderId);
+        if (res && (res.verified || res.status === 'SUCCESS')) {
+          setPaymentVerified(true);
+          setPaymentRef(res.orderId);
+          clearInterval(pollInterval);
+          setTimeout(() => {
+            setStep('STORE_SETUP');
+          }, 1200);
+        }
+      } catch (err) {
+        // silent polling check
+      }
+    }, 2500);
+
+    return () => clearInterval(pollInterval);
+  }, [step, youpiOrderId, paymentVerified]);
+
+  // Manual verification with UTR (for testing or manual bypass)
+  const handleManualVerifyUtr = async () => {
+    if (!youpiOrderId) return;
+    try {
+      setVerifyingUtr(true);
+      setErrorMsg('');
+      const res = await StoreApi.manualVerifyYoupi(youpiOrderId, youpiUtrInput.trim());
+      if (res && res.verified) {
+        setPaymentVerified(true);
+        setPaymentRef(res.orderId);
+        setTimeout(() => {
+          setStep('STORE_SETUP');
+        }, 800);
+      }
+    } catch (e: any) {
+      setErrorMsg(e.message || 'Verification failed. Please check the UTR.');
+    } finally {
+      setVerifyingUtr(false);
+    }
+  };
+
+  // Instant test payment bypass
   const handleSimulatePaymentSuccess = () => {
     setPaymentVerified(true);
-    setPaymentRef('PAYU_TEST_' + Date.now());
+    setPaymentRef(youpiOrderId || 'YOUPI_TEST_' + Date.now());
     setStep('STORE_SETUP');
   };
 
@@ -650,7 +689,7 @@ export function MerchantLandingPage() {
                     </button>
                     <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
                       <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Instant Store Activation with PayU</span>
+                      <span>Instant Store Activation with Direct UPI (0% Fee)</span>
                     </div>
                   </div>
                 </div>
@@ -689,9 +728,9 @@ export function MerchantLandingPage() {
               <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-6 font-bold text-xl">
                 2
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Secure PayU Checkout</h3>
+              <h3 className="text-xl font-bold text-white mb-2">Instant 0% Fee UPI Checkout</h3>
               <p className="text-sm text-slate-400 leading-relaxed">
-                Complete signup payment safely using PayU (Credit/Debit Cards, NetBanking, UPI, Wallets) or direct QR.
+                Complete signup payment safely using dynamic QR or 1-tap UPI apps (GPay, PhonePe, Paytm, CRED).
               </p>
             </div>
 
@@ -764,7 +803,7 @@ export function MerchantLandingPage() {
               <div className="w-6 h-[1px] bg-slate-800" />
               <div className={`flex items-center gap-2 ${step === 'PAYMENT' ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
                 <span className="w-6 h-6 rounded-full border flex items-center justify-center text-xs border-current">2</span>
-                <span>PayU Checkout</span>
+                <span>UPI Checkout</span>
               </div>
               <div className="w-6 h-[1px] bg-slate-800" />
               <div className={`flex items-center gap-2 ${step === 'STORE_SETUP' ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
@@ -899,11 +938,16 @@ export function MerchantLandingPage() {
               </form>
             )}
 
-            {/* STEP 2: PAYU PAYMENT CHECKOUT */}
+            {/* STEP 2: YOUPI SOVEREIGN UPI CHECKOUT */}
             {step === 'PAYMENT' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-xl font-bold text-white">Complete Plan Payment</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-white">Instant UPI Checkout</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      0% Fees • Direct Bank
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-400 mt-1">
                     Store creation for <span className="text-emerald-400 font-semibold">{storeName}</span> (
                     {subdomain})
@@ -918,159 +962,137 @@ export function MerchantLandingPage() {
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-black text-emerald-400">₹{selectedPlan.price}</div>
-                    <div className="text-[11px] text-slate-500">Inclusive of all taxes</div>
+                    <div className="text-[11px] text-slate-500">No platform convenience charge</div>
                   </div>
                 </div>
 
-                {/* Payment Option Selection */}
-                <div className="space-y-3">
-                  <label className="block text-xs font-semibold text-slate-300">Choose Payment Method</label>
-
-                  <div
-                    onClick={() => setPaymentMethod('PAYU')}
-                    className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-                      paymentMethod === 'PAYU'
-                        ? 'bg-emerald-500/10 border-emerald-500 text-white'
-                        : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                        <CreditCard className="w-5 h-5" />
+                {/* YouPI Dynamic Payment Session */}
+                {youpiLoading ? (
+                  <div className="p-8 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-4">
+                    <Loader2 className="w-8 h-8 animate-spin text-emerald-400 mx-auto" />
+                    <div className="text-sm font-bold text-white">Generating Dynamic Vector QR...</div>
+                    <div className="text-xs text-slate-400">Allocating dedicated sovereign UPI payment slot</div>
+                  </div>
+                ) : youpiData ? (
+                  <div className="p-5 sm:p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-5">
+                    {/* Top status bar: Timer & Radar */}
+                    <div className="flex items-center justify-between text-xs pb-3 border-b border-slate-800/80">
+                      <div className="flex items-center gap-2 text-emerald-400">
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                        </span>
+                        <span className="font-semibold text-[11px]">Observer Listening for Bank SMS</span>
                       </div>
-                      <div>
-                        <div className="font-bold text-sm">Pay via PayU Secure Gateway</div>
+                      <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[11px]">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <span>
+                          {Math.floor(youpiTimeLeft / 60)
+                            .toString()
+                            .padStart(2, '0')}
+                          :{(youpiTimeLeft % 60).toString().padStart(2, '0')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* QR Code and Instructions */}
+                    <div className="flex flex-col sm:flex-row items-center gap-6 justify-center">
+                      <div className="p-3 rounded-2xl bg-white shadow-xl shadow-emerald-500/10 shrink-0">
+                        <img
+                          src={
+                            youpiData.upiQrBase64 ||
+                            `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                              youpiData.upiUri
+                            )}`
+                          }
+                          alt="YouPI Dynamic QR"
+                          className="w-44 h-44 object-contain rounded-lg"
+                        />
+                      </div>
+
+                      <div className="space-y-3 text-left w-full sm:w-auto">
                         <div className="text-xs text-slate-400">
-                          Credit/Debit Cards, Net Banking, PayU UPI, Wallets
+                          Scan with any UPI app on your phone, or tap an app below:
+                        </div>
+
+                        {/* Mobile 1-Tap UPI App Switcher */}
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <a
+                            href={youpiData.upiUri}
+                            className="px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-white flex items-center justify-center gap-2 transition-colors"
+                          >
+                            <Smartphone className="w-3.5 h-3.5 text-blue-400" />
+                            <span>GPay / PhonePe</span>
+                          </a>
+                          <a
+                            href={youpiData.upiUri}
+                            className="px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-white flex items-center justify-center gap-2 transition-colors"
+                          >
+                            <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Paytm / CRED</span>
+                          </a>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800/80 font-mono text-[11px] text-slate-400 space-y-1">
+                          <div>
+                            UPI ID: <span className="text-emerald-400 font-bold">{youpiData.merchantVpa}</span>
+                          </div>
+                          <div className="truncate text-slate-500">Ref: {youpiData.orderId}</div>
                         </div>
                       </div>
                     </div>
-                    <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        paymentMethod === 'PAYU' ? 'border-emerald-500 bg-emerald-500' : 'border-slate-700'
-                      }`}
-                    >
-                      {paymentMethod === 'PAYU' && <Check className="w-3 h-3 text-slate-950" />}
+
+                    {/* Verification Progress Banner */}
+                    <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+                      <div className="text-xs text-emerald-300 font-medium flex items-center justify-center gap-2">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                        <span>Checking bank rails in real-time...</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Once paid, your screen will advance automatically.
+                      </p>
+                    </div>
+
+                    {/* Manual UTR Verification or Test Simulation */}
+                    <div className="pt-2 border-t border-slate-800/80 space-y-3">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={youpiUtrInput}
+                          onChange={(e) => setYoupiUtrInput(e.target.value)}
+                          placeholder="Optional: Enter 12-digit Bank UTR"
+                          className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleManualVerifyUtr}
+                          disabled={verifyingUtr || !youpiUtrInput.trim()}
+                          className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs disabled:opacity-40 transition-colors"
+                        >
+                          {verifyingUtr ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Verify'}
+                        </button>
+                      </div>
+
+                      <div className="text-center">
+                        <button
+                          type="button"
+                          onClick={handleSimulatePaymentSuccess}
+                          className="text-xs text-emerald-400 hover:text-emerald-300 underline font-semibold"
+                        >
+                          ⚡ Test Mode: Simulate Instant Bank Confirmation
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  <div
-                    onClick={() => setPaymentMethod('UPI_QR')}
-                    className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-                      paymentMethod === 'UPI_QR'
-                        ? 'bg-emerald-500/10 border-emerald-500 text-white'
-                        : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                        <QrCode className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className="font-bold text-sm">Instant Direct UPI QR</div>
-                        <div className="text-xs text-slate-400">Google Pay, PhonePe, Paytm, BHIM</div>
-                      </div>
-                    </div>
-                    <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        paymentMethod === 'UPI_QR' ? 'border-emerald-500 bg-emerald-500' : 'border-slate-700'
-                      }`}
-                    >
-                      {paymentMethod === 'UPI_QR' && <Check className="w-3 h-3 text-slate-950" />}
-                    </div>
-                  </div>
-                </div>
-
-                {/* PayU Hosted Checkout Action */}
-                {paymentMethod === 'PAYU' && (
-                  <div className="space-y-3 pt-2">
+                ) : (
+                  <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-3">
+                    <div className="text-sm text-slate-300">Could not initialize payment session</div>
                     <button
-                      onClick={handleInitiatePayU}
-                      disabled={payuLoading}
-                      className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/25 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                      type="button"
+                      onClick={handleInitiateYoupi}
+                      className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs"
                     >
-                      {payuLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Connecting to PayU Gateway...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="w-4 h-4" />
-                          <span>Pay ₹{selectedPlan.price} via PayU</span>
-                        </>
-                      )}
-                    </button>
-
-                    {/* Hidden Form for PayU Redirection */}
-                    {payuData && (
-                      <form
-                        id="payu-checkout-form"
-                        action={payuData.actionUrl}
-                        method="POST"
-                        className="hidden"
-                      >
-                        <input type="hidden" name="key" value={payuData.key} />
-                        <input type="hidden" name="txnid" value={payuData.txnid} />
-                        <input type="hidden" name="amount" value={payuData.amount} />
-                        <input type="hidden" name="productinfo" value={payuData.productinfo} />
-                        <input type="hidden" name="firstname" value={payuData.firstname} />
-                        <input type="hidden" name="email" value={payuData.email} />
-                        <input type="hidden" name="phone" value={payuData.phone} />
-                        <input type="hidden" name="surl" value={payuData.surl} />
-                        <input type="hidden" name="furl" value={payuData.furl} />
-                        <input type="hidden" name="hash" value={payuData.hash} />
-                        <input type="hidden" name="udf1" value={payuData.udf1} />
-                        <input type="hidden" name="udf2" value={payuData.udf2} />
-                        <input type="hidden" name="udf3" value={payuData.udf3} />
-                        <input type="hidden" name="udf4" value={payuData.udf4 || window.location.origin} />
-                        <input type="hidden" name="udf5" value={payuData.udf5 || ''} />
-                      </form>
-                    )}
-
-                    {/* PayU Live Gateway Info */}
-                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center">
-                      <div className="text-[11px] text-slate-400 mb-2">
-                        PayU Production Gateway | Merchant Key: <span className="text-emerald-400 font-mono">uiw0jf</span>
-                      </div>
-                      <button
-                        onClick={handleSimulatePaymentSuccess}
-                        className="text-xs text-emerald-400 hover:text-emerald-300 underline font-semibold"
-                      >
-                        ⚡ Simulate Instant Payment Success
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Instant UPI QR Code */}
-                {paymentMethod === 'UPI_QR' && (
-                  <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-4">
-                    <div className="text-xs text-slate-300">
-                      Scan with any UPI App (GPay, PhonePe, Paytm, BHIM)
-                    </div>
-
-                    <div className="inline-block p-3 rounded-2xl bg-white shadow-xl">
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
-                          `upi://pay?pa=amazingdeal@okaxis&pn=AmazingDeal%20Merchant%20Plan&am=${selectedPlan.price.toFixed(
-                            2
-                          )}&cu=INR&tn=${encodeURIComponent(selectedPlan.name)}`
-                        )}`}
-                        alt="UPI QR Code"
-                        className="w-40 h-40"
-                      />
-                    </div>
-
-                    <div className="font-mono text-xs text-emerald-400 font-bold">
-                      UPI ID: amazingdeal@okaxis • Amount: ₹{selectedPlan.price}
-                    </div>
-
-                    <button
-                      onClick={handleSimulatePaymentSuccess}
-                      className="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-sm transition-all"
-                    >
-                      I Have Completed the Payment →
+                      Retry Checkout Session
                     </button>
                   </div>
                 )}

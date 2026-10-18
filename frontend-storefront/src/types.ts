@@ -131,6 +131,36 @@ export interface PayUVerifyResponse {
   message: string;
 }
 
+export interface YoupiInitiateResponse {
+  orderId: string;
+  paymentId: string;
+  amount: number;
+  currency: string;
+  planId: string;
+  subdomain: string;
+  storeName: string;
+  upiUri: string;
+  upiQrBase64: string;
+  merchantVpa: string;
+  merchantName: string;
+  checkoutUrl: string;
+  statusUrl: string;
+  status: string; // PENDING, SUCCESS, FAILED, EXPIRED
+  gatewayOnline: boolean;
+  message: string;
+}
+
+export interface YoupiStatusResponse {
+  orderId: string;
+  status: string;
+  verified: boolean;
+  amount: number;
+  utr?: string;
+  planId?: string;
+  subdomain?: string;
+  message: string;
+}
+
 export interface MerchantRegisterRequest {
   storeName: string;
   subdomain: string;

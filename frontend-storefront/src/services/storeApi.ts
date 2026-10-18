@@ -268,6 +268,56 @@ export class StoreApi {
     };
   }
 
+  public static async initiateYoupi(data: {
+    planId: string;
+    amount: number;
+    firstname: string;
+    email: string;
+    phone: string;
+    subdomain?: string;
+    storeName?: string;
+    returnUrl?: string;
+  }): Promise<any> {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const payload = {
+      ...data,
+      returnUrl: data.returnUrl || origin,
+    };
+
+    const res = await fetch(`${API_BASE}/api/v1/youpi/initiate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Failed to initiate YouPI payment' }));
+      throw new Error(err.message || 'Failed to initiate YouPI payment');
+    }
+
+    return await res.json();
+  }
+
+  public static async checkYoupiStatus(orderId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/v1/youpi/status/${encodeURIComponent(orderId)}`);
+    if (!res.ok) {
+      throw new Error('Failed to fetch status');
+    }
+    return await res.json();
+  }
+
+  public static async manualVerifyYoupi(orderId: string, utr?: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/v1/youpi/manual-verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId, utr }),
+    });
+    if (!res.ok) {
+      throw new Error('Failed to verify payment manually');
+    }
+    return await res.json();
+  }
+
   public static async registerStore(storeData: any): Promise<any> {
     const res = await fetch(`${API_BASE}/api/v1/auth/register-store`, {
       method: 'POST',
