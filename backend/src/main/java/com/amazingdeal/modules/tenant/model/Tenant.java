@@ -82,6 +82,16 @@ public class Tenant {
     @Column(name = "logo_url", length = 500)
     private String logoUrl;
 
+    @Builder.Default
+    @Column(name = "subscription_plan", length = 50)
+    private String subscriptionPlan = "MONTHLY";
+
+    @Column(name = "subscription_expires_at")
+    private Instant subscriptionExpiresAt;
+
+    @Column(name = "subscription_payment_ref", length = 100)
+    private String subscriptionPaymentRef;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;

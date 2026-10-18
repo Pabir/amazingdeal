@@ -22,6 +22,19 @@ public class AuthController {
 
     private final TenantService tenantService;
 
+    @GetMapping("/check-subdomain")
+    public ResponseEntity<Map<String, Object>> checkSubdomain(@RequestParam("subdomain") String subdomain) {
+        boolean available = tenantService.isSubdomainAvailable(subdomain);
+        String message = available 
+            ? "Subdomain is available!" 
+            : "Subdomain is not available or invalid format (only letters, numbers, and hyphens).";
+        return ResponseEntity.ok(Map.of(
+            "available", available,
+            "subdomain", subdomain != null ? subdomain.trim().toLowerCase() : "",
+            "message", message
+        ));
+    }
+
     @PostMapping("/register-store")
     public ResponseEntity<AuthResponse> registerStore(@Valid @RequestBody RegisterStoreRequest request) {
         AuthResponse response = tenantService.registerStore(request);

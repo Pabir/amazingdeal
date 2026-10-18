@@ -83,3 +83,77 @@ export interface CustomerAuthSession {
   addresses: CustomerAddress[];
 }
 
+export type SubscriptionPlanId = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+
+export interface SubscriptionPlan {
+  id: SubscriptionPlanId;
+  name: string;
+  badge?: string;
+  billingText: string;
+  price: number;
+  originalPrice?: number;
+  monthlyEquivalent: number;
+  popular?: boolean;
+  features: string[];
+}
+
+export interface SubdomainCheckResponse {
+  available: boolean;
+  subdomain: string;
+  message: string;
+}
+
+export interface PayUInitiateResponse {
+  actionUrl: string;
+  key: string;
+  txnid: string;
+  amount: string;
+  productinfo: string;
+  firstname: string;
+  email: string;
+  phone: string;
+  surl: string;
+  furl: string;
+  hash: string;
+  udf1: string;
+  udf2: string;
+  udf3: string;
+  udf4: string;
+  udf5: string;
+}
+
+export interface PayUVerifyResponse {
+  verified: boolean;
+  status: string;
+  txnid: string;
+  planId: string;
+  subdomain: string;
+  message: string;
+}
+
+export interface MerchantRegisterRequest {
+  storeName: string;
+  subdomain: string;
+  ownerPhone: string;
+  ownerEmail: string;
+  password: string;
+  storeCategory?: string;
+  storeAddress?: string;
+  upiVpa?: string;
+  subscriptionPlan?: string;
+  subscriptionPaymentRef?: string;
+}
+
+export interface MerchantAuthResponse {
+  token: string;
+  tokenType: string;
+  tenantId: string;
+  storeName: string;
+  subdomain: string;
+  storefrontUrl: string;
+  ownerEmail: string;
+  ownerPhone: string;
+  upiVpa: string;
+}
+
+

@@ -10,7 +10,7 @@ const RESERVED_HOST_PREFIXES = [
   'storefront',
 ];
 
-export function useSubdomain(): string {
+export function useSubdomain(): string | null {
   return useMemo(() => {
     // 1. Check query parameter (?store=... or ?subdomain=... or ?tenant=...)
     const params = new URLSearchParams(window.location.search);
@@ -25,8 +25,19 @@ export function useSubdomain(): string {
 
     // On Cloudflare Workers/Pages default domains (*.workers.dev, *.pages.dev),
     // the first subdomain part is the worker project name, not a merchant subdomain.
+    // If no ?store= is provided, it is the guest merchant landing page!
     if (host.includes('workers.dev') || host.includes('pages.dev')) {
-      return 'guptakiranastore';
+      return null;
+    }
+
+    // Root apex domain (e.g. amazingdeal.co.in or www.amazingdeal.co.in) -> Landing Page
+    if (host === 'amazingdeal.co.in' || host === 'www.amazingdeal.co.in') {
+      return null;
+    }
+
+    // Localhost without store query param -> Landing Page
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return null;
     }
 
     // e.g. storename.amazingdeal.co.in (4 parts) or store.customdomain.com
@@ -39,8 +50,8 @@ export function useSubdomain(): string {
       return parts[0];
     }
 
-    // Default demo store fallback for direct root access
-    return 'guptakiranastore';
+    // Default: show landing page
+    return null;
   }, []);
 }
 

@@ -13,6 +13,7 @@ import { OrderSuccessModal } from './components/OrderSuccessModal';
 import { CustomerAuthModal } from './components/CustomerAuthModal';
 import { MyOrdersModal } from './components/MyOrdersModal';
 import { SavedAddressesModal } from './components/SavedAddressesModal';
+import { MerchantLandingPage } from './components/MerchantLandingPage';
 import { Search, ShoppingBag, ArrowRight } from 'lucide-react';
 
 export function App() {
@@ -54,7 +55,7 @@ export function App() {
     clearCart,
     totalItems: totalCartItems,
     subtotal: cartSubtotal,
-  } = useCart(subdomain);
+  } = useCart(subdomain || '');
 
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(false);
@@ -63,6 +64,10 @@ export function App() {
 
   useEffect(() => {
     async function loadStoreData() {
+      if (!subdomain) {
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         const [storeData, productData] = await Promise.all([
@@ -163,6 +168,7 @@ export function App() {
   });
 
   const handlePlaceOrder = async (orderPayload: any) => {
+    if (!subdomain) return;
     try {
       setPlacingOrder(true);
       const createdOrder = await StoreApi.placeOrder(subdomain, orderPayload);
@@ -187,8 +193,27 @@ export function App() {
     setIsCartOpen(true);
   };
 
+  if (!subdomain) {
+    return <MerchantLandingPage />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-24">
+      {/* Platform Branding & Merchant Callout */}
+      <div className="bg-slate-950 text-slate-300 px-4 py-2 text-xs flex items-center justify-between border-b border-slate-800">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>⚡ Powered by <strong className="text-white">AmazingDeal</strong> — Online Hyperlocal Storefront</span>
+        </div>
+        <a
+          href={window.location.origin}
+          className="text-emerald-400 hover:text-emerald-300 font-bold underline flex items-center gap-1 text-[11px] sm:text-xs"
+        >
+          <span>Create Your Own Store (0% Commission)</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </a>
+      </div>
+
       {/* Storefront Header with Customer Profile / Sign In */}
       <StoreHeader
         store={store}

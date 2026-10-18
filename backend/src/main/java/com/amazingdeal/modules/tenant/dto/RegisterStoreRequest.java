@@ -33,4 +33,7 @@ public class RegisterStoreRequest {
     private String storeCategory; // Groceries, Apparel, Sweets, Hardware, etc.
     private String storeAddress;
     private String upiVpa; // e.g. "sharma@okaxis"
+    private String subscriptionPlan; // MONTHLY, QUARTERLY, YEARLY
+    private String subscriptionPaymentRef; // PayU txnid or payment ref
 }
+

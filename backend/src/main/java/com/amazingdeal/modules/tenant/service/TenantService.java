@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -34,6 +36,14 @@ public class TenantService {
         "api", "admin", "www", "app", "dashboard", "status", "mail", "cdn", "assets", "static"
     );
 
+    public boolean isSubdomainAvailable(String subdomain) {
+        if (subdomain == null || subdomain.isBlank()) return false;
+        String clean = subdomain.trim().toLowerCase();
+        if (RESERVED_SUBDOMAINS.contains(clean)) return false;
+        if (!clean.matches("^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$")) return false;
+        return !tenantRepository.existsBySubdomainIgnoreCase(clean);
+    }
+
     @Transactional
     public AuthResponse registerStore(RegisterStoreRequest request) {
         String sub = request.getSubdomain().trim().toLowerCase();
@@ -48,6 +58,15 @@ public class TenantService {
         if (tenantRepository.existsByOwnerEmailIgnoreCase(request.getOwnerEmail().trim())) {
             throw new IllegalArgumentException("Account with email '" + request.getOwnerEmail() + "' already exists.");
         }
+
+        String plan = (request.getSubscriptionPlan() != null && !request.getSubscriptionPlan().isBlank())
+                ? request.getSubscriptionPlan().toUpperCase().trim()
+                : "MONTHLY";
+
+        Instant expiresAt = Instant.now().plus(
+                plan.equals("YEARLY") ? 365 : (plan.equals("QUARTERLY") ? 90 : 30),
+                ChronoUnit.DAYS
+        );
 
         Tenant tenant = Tenant.builder()
                 .storeName(request.getStoreName().trim())
@@ -64,6 +83,9 @@ public class TenantService {
                 .minOrderAmount(BigDecimal.ZERO)
                 .freeDeliveryAbove(BigDecimal.valueOf(499.0))
                 .storeTimings("8:00 AM - 10:00 PM")
+                .subscriptionPlan(plan)
+                .subscriptionExpiresAt(expiresAt)
+                .subscriptionPaymentRef(request.getSubscriptionPaymentRef())
                 .build();
 
         Tenant saved = tenantRepository.save(tenant);

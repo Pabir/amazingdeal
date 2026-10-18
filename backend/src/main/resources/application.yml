@@ -65,6 +65,12 @@ app:
     whatsapp:
       api-token: ${WHATSAPP_API_TOKEN:}
       phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+  payu:
+    key: ${PAYU_KEY:uiw0jf}
+    salt: ${PAYU_SALT:saPx7EYtKYEEgOuBSjyoVvrncKIjZ2LJ}
+    mode: ${PAYU_MODE:test}
+    surl: ${PAYU_SURL:https://amazingdeal-storefront.drskpabirulislam1995.workers.dev/payu-callback}
+    furl: ${PAYU_FURL:https://amazingdeal-storefront.drskpabirulislam1995.workers.dev/payu-callback}
 
 management:
   endpoints:
