@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Check,
   X,
+  Menu,
   Loader2,
   Lock,
   RefreshCw,
@@ -105,6 +106,7 @@ const FAQS = [
 export function MerchantLandingPage() {
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>(PLANS[1]); // default Quarterly
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [step, setStep] = useState<'DETAILS' | 'PAYMENT' | 'STORE_SETUP' | 'SUCCESS'>('DETAILS');
 
   // Step 1: Merchant Contact & Desired Subdomain
@@ -448,71 +450,155 @@ export function MerchantLandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-white overflow-x-hidden w-full">
       {/* Top Header */}
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-slate-950 font-black text-2xl tracking-tight">
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/90 border-b border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-slate-950 font-black text-lg sm:text-xl lg:text-2xl tracking-tight shrink-0">
               A
             </div>
-            <div>
-              <span className="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
-                AmazingDeal
-                <span className="text-[10px] uppercase tracking-wider font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+            <div className="min-w-0">
+              <span className="text-base sm:text-lg lg:text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5 sm:gap-2">
+                <span>AmazingDeal</span>
+                <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-1.5 sm:px-2 py-0.5 rounded-full shrink-0 hidden min-[380px]:inline-flex">
                   Merchant Cloud
                 </span>
               </span>
-              <p className="text-xs text-slate-400 hidden sm:block">Zero-Commission Hyperlocal Commerce</p>
+              <p className="text-[11px] text-slate-400 hidden xl:block leading-tight">
+                Zero-Commission Hyperlocal Commerce
+              </p>
             </div>
           </div>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-            <a href="#features" className="hover:text-emerald-400 transition-colors">
+          {/* Desktop Nav Links (Visible on lg+ with elegant spacing, preventing collision with buttons) */}
+          <nav className="hidden lg:flex items-center gap-4 xl:gap-7 text-xs xl:text-sm font-medium text-slate-300">
+            <a href="#features" className="hover:text-emerald-400 transition-colors whitespace-nowrap">
               Features
             </a>
-            <a href="#plans" className="hover:text-emerald-400 transition-colors">
+            <a href="#plans" className="hover:text-emerald-400 transition-colors whitespace-nowrap">
               Plans & Pricing
             </a>
-            <a href="#how-it-works" className="hover:text-emerald-400 transition-colors">
+            <a href="#how-it-works" className="hover:text-emerald-400 transition-colors whitespace-nowrap">
               How It Works
             </a>
-            <a href="#faq" className="hover:text-emerald-400 transition-colors">
+            <a href="#faq" className="hover:text-emerald-400 transition-colors whitespace-nowrap">
               FAQ
             </a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          {/* Right Actions & Mobile Hamburger */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            {/* Demo Store Link: Hidden on small mobile to prevent overflow, visible on sm+ */}
             <button
               onClick={() => navigateToStore('guptakiranastore')}
-              className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all flex items-center gap-1.5"
+              className="hidden sm:inline-flex px-3 sm:px-3.5 lg:px-4 py-2 text-xs lg:text-sm font-semibold rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all items-center gap-1.5 shrink-0 whitespace-nowrap"
             >
-              <Store className="w-4 h-4 text-emerald-400" />
-              <span>Explore Demo Store</span>
+              <Store className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-emerald-400" />
+              <span className="hidden md:inline">Explore Demo Store</span>
+              <span className="md:hidden">Demo</span>
             </button>
+
+            {/* Start Free Trial CTA */}
             <button
               onClick={() => openPlanModal(PLANS[1])}
-              className="px-4 py-2 text-xs sm:text-sm font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-md sm:shadow-lg shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5 shrink-0 whitespace-nowrap"
             >
-              Start Free Trial
+              <span className="hidden sm:inline">Start Free Trial</span>
+              <span className="sm:hidden">Start Free</span>
+            </button>
+
+            {/* Mobile / Tablet Menu Toggle (Visible below lg) */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 border border-slate-800 transition-colors shrink-0"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5 text-emerald-400" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
+
+        {/* Mobile / Tablet Collapsible Menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden bg-slate-950/95 border-b border-slate-800 px-4 py-5 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200 space-y-4">
+            <nav className="flex flex-col space-y-2.5 text-sm font-medium text-slate-200">
+              <a
+                href="#features"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl hover:bg-slate-900 hover:text-emerald-400 transition-colors flex items-center justify-between"
+              >
+                <span>Features</span>
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </a>
+              <a
+                href="#plans"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl hover:bg-slate-900 hover:text-emerald-400 transition-colors flex items-center justify-between"
+              >
+                <span>Plans & Pricing</span>
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </a>
+              <a
+                href="#how-it-works"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl hover:bg-slate-900 hover:text-emerald-400 transition-colors flex items-center justify-between"
+              >
+                <span>How It Works</span>
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </a>
+              <a
+                href="#faq"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl hover:bg-slate-900 hover:text-emerald-400 transition-colors flex items-center justify-between"
+              >
+                <span>FAQ</span>
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </a>
+            </nav>
+
+            <div className="pt-3 border-t border-slate-800/80 space-y-2">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  navigateToStore('guptakiranastore');
+                }}
+                className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-semibold flex items-center justify-center gap-2"
+              >
+                <Store className="w-4 h-4 text-emerald-400" />
+                <span>Explore Live Demo Store</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openPlanModal(PLANS[1]);
+                }}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Choose a Plan & Create Store</span>
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-12 pb-24 lg:pt-20 lg:pb-32">
+      <section className="relative overflow-hidden pt-8 pb-14 sm:pt-14 sm:pb-20 lg:pt-16 lg:pb-24">
         {/* Glow ambient background elements */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-emerald-500/15 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute top-1/3 right-10 w-[450px] h-[350px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] sm:w-[700px] h-[350px] sm:h-[400px] bg-emerald-500/15 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-1/3 right-10 w-[350px] sm:w-[450px] h-[280px] sm:h-[350px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm font-semibold mb-8 animate-pulse">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm font-semibold mb-6 sm:mb-8 animate-pulse">
+            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
             <span>Launch Your Online Business in 2 Minutes</span>
           </div>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight max-w-4xl mx-auto leading-[1.1] text-white">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight max-w-4xl mx-auto leading-[1.15] text-white">
             Own Your Storefront.{' '}
             <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
               0% Commission.
@@ -520,24 +606,24 @@ export function MerchantLandingPage() {
             Direct UPI to Your Bank.
           </h1>
 
-          <p className="mt-6 text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-4 sm:mt-6 text-sm sm:text-base lg:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
             Turn your local grocery, supermarket, pharmacy, or retail shop into an e-commerce powerhouse.
             Accept instant customer UPI payments directly, manage orders with a live Kanban board, and print thermal
             receipts on the spot.
           </p>
 
           {/* CTA Buttons */}
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 max-w-md sm:max-w-none mx-auto">
             <button
               onClick={() => openPlanModal(PLANS[1])}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-base sm:text-lg shadow-xl shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
+              className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm sm:text-base lg:text-lg shadow-xl shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
             >
               <span>Choose a Plan & Create Store</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
             <button
               onClick={() => navigateToStore('guptakiranastore')}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-white font-semibold text-base sm:text-lg border border-slate-700/80 transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-white font-semibold text-sm sm:text-base lg:text-lg border border-slate-700/80 transition-all flex items-center justify-center gap-2"
             >
               <Store className="w-5 h-5 text-emerald-400" />
               <span>Explore Live Demo Store</span>
@@ -545,69 +631,77 @@ export function MerchantLandingPage() {
           </div>
 
           {/* Value Props Row */}
-          <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-left">
-            <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-sm">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-2">
-                <ShieldCheck className="w-5 h-5" />
+          <div className="mt-10 sm:mt-14 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 max-w-5xl mx-auto text-left">
+            <div className="p-3 sm:p-4 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-sm">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-2">
+                <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <h4 className="font-bold text-white text-sm">0% Platform Fee</h4>
-              <p className="text-xs text-slate-400 mt-1">Keep 100% of your earnings. No hidden transaction cuts.</p>
+              <h4 className="font-bold text-white text-xs sm:text-sm">0% Platform Fee</h4>
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-1 leading-snug">
+                Keep 100% of your earnings. No hidden transaction cuts.
+              </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-sm">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-2">
-                <QrCode className="w-5 h-5" />
+            <div className="p-3 sm:p-4 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-sm">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-2">
+                <QrCode className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <h4 className="font-bold text-white text-sm">Direct Bank UPI</h4>
-              <p className="text-xs text-slate-400 mt-1">Customers scan & pay directly to your merchant UPI ID.</p>
+              <h4 className="font-bold text-white text-xs sm:text-sm">Direct Bank UPI</h4>
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-1 leading-snug">
+                Customers scan & pay directly to your merchant UPI ID.
+              </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-sm">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-2">
-                <Printer className="w-5 h-5" />
+            <div className="p-3 sm:p-4 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-sm">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-2">
+                <Printer className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <h4 className="font-bold text-white text-sm">Thermal Billing</h4>
-              <p className="text-xs text-slate-400 mt-1">One-click 58mm/80mm receipt generation for deliveries.</p>
+              <h4 className="font-bold text-white text-xs sm:text-sm">Thermal Billing</h4>
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-1 leading-snug">
+                One-click 58mm/80mm receipt generation for deliveries.
+              </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-sm">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-2">
-                <Zap className="w-5 h-5" />
+            <div className="p-3 sm:p-4 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-sm">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-2">
+                <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <h4 className="font-bold text-white text-sm">Live Storefront URL</h4>
-              <p className="text-xs text-slate-400 mt-1">Instant ready-to-share link: .../?store=yourstore</p>
+              <h4 className="font-bold text-white text-xs sm:text-sm">Live Storefront URL</h4>
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-1 leading-snug">
+                Instant ready-to-share link: .../?store=yourstore
+              </p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Live Interactive Preview Card */}
-      <section className="py-12 border-y border-slate-800/80 bg-slate-900/30">
+      <section id="features" className="py-12 border-y border-slate-800/80 bg-slate-900/30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 sm:p-10 shadow-2xl overflow-hidden relative">
+          <div className="rounded-2xl sm:rounded-3xl bg-slate-900/90 border border-slate-800 p-5 sm:p-8 lg:p-10 shadow-2xl overflow-hidden relative">
             <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-              <div className="max-w-lg">
-                <span className="text-xs uppercase font-extrabold tracking-wider text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/30">
+              <div className="max-w-lg w-full">
+                <span className="text-[11px] sm:text-xs uppercase font-extrabold tracking-wider text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/30">
                   Ready-to-use Sample Store
                 </span>
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-white mt-4">
+                <h3 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white mt-3 sm:mt-4">
                   See how "Gupta Kirana Store" sells groceries online
                 </h3>
-                <p className="text-slate-300 mt-3 text-sm leading-relaxed">
+                <p className="text-slate-300 mt-2 sm:mt-3 text-xs sm:text-sm leading-relaxed">
                   Browse products, add items to cart, test OTP and email logins, place an order with dynamic UPI QR,
                   and inspect the live order tracking flow.
                 </p>
-                <div className="mt-6 flex flex-wrap gap-3">
+                <div className="mt-5 sm:mt-6 flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={() => navigateToStore('guptakiranastore')}
-                    className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+                    className="w-full sm:w-auto px-5 sm:px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
                   >
                     <span>Open Live Storefront</span>
                     <ExternalLink className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => openPlanModal(PLANS[1])}
-                    className="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm border border-slate-700"
+                    className="w-full sm:w-auto px-5 sm:px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm border border-slate-700 flex items-center justify-center"
                   >
                     Create My Store Like This
                   </button>
@@ -615,41 +709,41 @@ export function MerchantLandingPage() {
               </div>
 
               {/* Mock browser window */}
-              <div className="w-full lg:w-1/2 rounded-2xl bg-slate-950 border border-slate-800 p-4 shadow-xl">
+              <div className="w-full lg:w-1/2 rounded-2xl bg-slate-950 border border-slate-800 p-3 sm:p-4 shadow-xl">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-xs text-slate-400">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block" />
-                    <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
-                    <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-rose-500/80 inline-block" />
+                    <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-amber-500/80 inline-block" />
+                    <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500/80 inline-block" />
                   </div>
-                  <div className="bg-slate-900 px-3 py-1 rounded-lg text-[11px] font-mono text-emerald-400 border border-slate-800">
+                  <div className="bg-slate-900 px-2 sm:px-3 py-1 rounded-lg text-[10px] sm:text-[11px] font-mono text-emerald-400 border border-slate-800 truncate max-w-[190px] sm:max-w-none">
                     .../?store=guptakiranastore
                   </div>
-                  <div className="w-6" />
+                  <div className="w-6 shrink-0" />
                 </div>
-                <div className="pt-4 space-y-3">
-                  <div className="h-16 rounded-xl bg-slate-900 border border-slate-800 p-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center">
+                <div className="pt-3 sm:pt-4 space-y-3">
+                  <div className="rounded-xl bg-slate-900 border border-slate-800 p-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center shrink-0 text-xs sm:text-sm">
                         GK
                       </div>
-                      <div>
-                        <div className="font-bold text-sm text-white">Gupta Kirana Store</div>
-                        <div className="text-xs text-slate-400">Open • 8:00 AM - 10:00 PM • Free Delivery Above ₹499</div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs sm:text-sm text-white truncate">Gupta Kirana Store</div>
+                        <div className="text-[10px] sm:text-xs text-slate-400 truncate">Open • 8:00 AM - 10:00 PM • Free Delivery Above ₹499</div>
                       </div>
                     </div>
-                    <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-300 rounded-lg">
+                    <span className="text-[10px] sm:text-xs font-semibold px-2 sm:px-2.5 py-1 bg-emerald-500/20 text-emerald-300 rounded-lg shrink-0">
                       Active
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
-                      <div className="text-slate-400">Fresh Milk (1L)</div>
-                      <div className="font-bold text-emerald-400 mt-1">₹66.00</div>
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 text-xs">
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-slate-900 border border-slate-800">
+                      <div className="text-slate-400 text-[11px] sm:text-xs truncate">Fresh Milk (1L)</div>
+                      <div className="font-bold text-emerald-400 mt-1 text-xs sm:text-sm">₹66.00</div>
                     </div>
-                    <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
-                      <div className="text-slate-400">Sharbati Atta (5kg)</div>
-                      <div className="font-bold text-emerald-400 mt-1">₹245.00</div>
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-slate-900 border border-slate-800">
+                      <div className="text-slate-400 text-[11px] sm:text-xs truncate">Sharbati Atta (5kg)</div>
+                      <div className="font-bold text-emerald-400 mt-1 text-xs sm:text-sm">₹245.00</div>
                     </div>
                   </div>
                 </div>
@@ -660,67 +754,67 @@ export function MerchantLandingPage() {
       </section>
 
       {/* Subscription Plans Section */}
-      <section id="plans" className="py-20 lg:py-32 relative">
+      <section id="plans" className="py-16 sm:py-20 lg:py-28 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
             <span className="text-xs uppercase font-extrabold tracking-wider text-emerald-400 bg-emerald-500/10 px-3.5 py-1.5 rounded-full border border-emerald-500/30">
               Transparent Pricing
             </span>
-            <h2 className="text-3xl sm:text-5xl font-extrabold text-white mt-4">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white mt-4">
               Simple, Affordable Plans for Every Merchant
             </h2>
-            <p className="text-slate-300 mt-4 text-base sm:text-lg">
+            <p className="text-slate-300 mt-3 sm:mt-4 text-sm sm:text-base lg:text-lg">
               No sales commission, no hidden merchant gateway fees. Pay once, sell unlimited products, and keep 100% of
               your hard-earned profit.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 items-stretch max-w-5xl mx-auto">
             {PLANS.map((plan) => {
               const isPopular = plan.popular;
               return (
                 <div
                   key={plan.id}
-                  className={`rounded-3xl p-8 flex flex-col justify-between transition-all relative ${
+                  className={`rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all relative ${
                     isPopular
                       ? 'bg-gradient-to-b from-slate-900 via-slate-900 to-emerald-950/40 border-2 border-emerald-500 shadow-2xl shadow-emerald-500/15 lg:-translate-y-2'
                       : 'bg-slate-900/70 border border-slate-800 hover:border-slate-700'
                   }`}
                 >
                   {plan.badge && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md">
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md whitespace-nowrap">
                       {plan.badge}
                     </div>
                   )}
 
                   <div>
-                    <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
+                    <h3 className="text-xl sm:text-2xl font-bold text-white">{plan.name}</h3>
                     <p className="text-xs text-slate-400 mt-1">{plan.billingText}</p>
 
                     <div className="mt-6 flex items-baseline gap-2">
-                      <span className="text-4xl sm:text-5xl font-black text-white">₹{plan.price}</span>
+                      <span className="text-3xl sm:text-5xl font-black text-white">₹{plan.price}</span>
                       {plan.originalPrice && (
-                        <span className="text-lg text-slate-500 line-through">₹{plan.originalPrice}</span>
+                        <span className="text-base sm:text-lg text-slate-500 line-through">₹{plan.originalPrice}</span>
                       )}
                       <span className="text-xs text-slate-400">
                         {plan.id === 'MONTHLY' ? '/mo' : `(~₹${plan.monthlyEquivalent}/mo)`}
                       </span>
                     </div>
 
-                    <div className="mt-8 pt-8 border-t border-slate-800 space-y-3.5">
+                    <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-slate-800 space-y-3 sm:space-y-3.5">
                       {plan.features.map((feat, idx) => (
-                        <div key={idx} className="flex items-start gap-3 text-sm text-slate-300">
-                          <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                        <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-slate-300">
+                          <Check className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0 mt-0.5" />
                           <span>{feat}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="mt-10">
+                  <div className="mt-8 sm:mt-10">
                     <button
                       onClick={() => openPlanModal(plan)}
-                      className={`w-full py-4 rounded-2xl font-extrabold text-sm sm:text-base transition-all flex items-center justify-center gap-2 ${
+                      className={`w-full py-3.5 sm:py-4 rounded-2xl font-extrabold text-sm sm:text-base transition-all flex items-center justify-center gap-2 ${
                         isPopular
                           ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/25'
                           : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
@@ -729,8 +823,8 @@ export function MerchantLandingPage() {
                       <span>Choose {plan.name}</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
-                    <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] text-slate-400 text-center">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                       <span>Instant Store Activation with Direct UPI (0% Fee)</span>
                     </div>
                   </div>
@@ -742,47 +836,47 @@ export function MerchantLandingPage() {
       </section>
 
       {/* How It Works Section */}
-      <section id="how-it-works" className="py-20 border-t border-slate-800/80 bg-slate-900/40">
+      <section id="how-it-works" className="py-16 sm:py-20 border-t border-slate-800/80 bg-slate-900/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
+          <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
             <span className="text-xs uppercase font-extrabold tracking-wider text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/30">
               3 Easy Steps
             </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-4">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-white mt-4">
               How To Create Your Store in Minutes
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 relative">
-              <span className="text-5xl font-black text-slate-800 absolute top-6 right-6 select-none">01</span>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-6 font-bold text-xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8">
+            <div className="p-6 sm:p-8 rounded-3xl bg-slate-900 border border-slate-800 relative">
+              <span className="text-4xl sm:text-5xl font-black text-slate-800 absolute top-6 right-6 select-none">01</span>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-5 sm:mb-6 font-bold text-lg sm:text-xl">
                 1
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Pick Your Plan</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">Pick Your Plan</h3>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Select between Monthly, Quarterly, or Yearly subscription based on your business stage.
               </p>
             </div>
 
-            <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 relative">
-              <span className="text-5xl font-black text-slate-800 absolute top-6 right-6 select-none">02</span>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-6 font-bold text-xl">
+            <div className="p-6 sm:p-8 rounded-3xl bg-slate-900 border border-slate-800 relative">
+              <span className="text-4xl sm:text-5xl font-black text-slate-800 absolute top-6 right-6 select-none">02</span>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-5 sm:mb-6 font-bold text-lg sm:text-xl">
                 2
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Instant 0% Fee UPI Checkout</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">Instant 0% Fee UPI Checkout</h3>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Complete signup payment safely using dynamic QR or 1-tap UPI apps (GPay, PhonePe, Paytm, CRED).
               </p>
             </div>
 
-            <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 relative">
-              <span className="text-5xl font-black text-slate-800 absolute top-6 right-6 select-none">03</span>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-6 font-bold text-xl">
+            <div className="p-6 sm:p-8 rounded-3xl bg-slate-900 border border-slate-800 relative">
+              <span className="text-4xl sm:text-5xl font-black text-slate-800 absolute top-6 right-6 select-none">03</span>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-5 sm:mb-6 font-bold text-lg sm:text-xl">
                 3
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Store is Live!</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">Store is Live!</h3>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Your store URL (e.g. .../?store=yourstore) is ready instantly with default catalog products pre-seeded.
               </p>
             </div>
@@ -791,21 +885,21 @@ export function MerchantLandingPage() {
       </section>
 
       {/* FAQs Section */}
-      <section id="faq" className="py-20 border-t border-slate-800/80">
+      <section id="faq" className="py-16 sm:py-20 border-t border-slate-800/80">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">Frequently Asked Questions</h2>
-            <p className="text-slate-400 mt-3 text-sm">Everything you need to know about starting your digital store.</p>
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-white">Frequently Asked Questions</h2>
+            <p className="text-slate-400 mt-2 sm:mt-3 text-xs sm:text-sm">Everything you need to know about starting your digital store.</p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {FAQS.map((item, idx) => (
-              <div key={idx} className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <h4 className="font-bold text-white text-base flex items-center gap-2">
+              <div key={idx} className="p-5 sm:p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
+                <h4 className="font-bold text-white text-sm sm:text-base flex items-center gap-2">
                   <HelpCircle className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span>{item.q}</span>
                 </h4>
-                <p className="mt-2 text-sm text-slate-300 pl-6 leading-relaxed">{item.a}</p>
+                <p className="mt-2 text-xs sm:text-sm text-slate-300 pl-6 leading-relaxed">{item.a}</p>
               </div>
             ))}
           </div>
@@ -813,8 +907,8 @@ export function MerchantLandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-slate-800 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 space-y-3">
+      <footer className="py-10 sm:py-12 border-t border-slate-800 text-center text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 space-y-2 sm:space-y-3">
           <p className="font-semibold text-slate-400">AmazingDeal — Empowering 10,000+ Indian Neighborhood Merchants</p>
           <p>© 2026 AmazingDeal.co.in. All rights reserved. Built with pride for local businesses.</p>
         </div>
@@ -824,32 +918,32 @@ export function MerchantLandingPage() {
       {/* ONBOARDING MODAL: DETAILS -> RAZORPAY PAYMENT -> STORE SETUP -> SUCCESS */}
       {/* ========================================================================= */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
-          <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 relative my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+          <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 relative my-4 sm:my-8 max-h-[92vh] overflow-y-auto">
             {/* Close Button */}
             {step !== 'SUCCESS' && (
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="absolute top-6 right-6 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             )}
 
             {/* Step Indicators */}
-            <div className="flex items-center justify-between pb-6 mb-6 border-b border-slate-800 text-xs">
-              <div className={`flex items-center gap-2 ${step === 'DETAILS' ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
-                <span className="w-6 h-6 rounded-full border flex items-center justify-center text-xs border-current">1</span>
+            <div className="flex items-center justify-between pb-4 sm:pb-6 mb-4 sm:mb-6 border-b border-slate-800 text-[11px] sm:text-xs">
+              <div className={`flex items-center gap-1.5 sm:gap-2 ${step === 'DETAILS' ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border flex items-center justify-center text-[10px] sm:text-xs border-current shrink-0">1</span>
                 <span>Contact & Store</span>
               </div>
-              <div className="w-6 h-[1px] bg-slate-800" />
-              <div className={`flex items-center gap-2 ${step === 'PAYMENT' ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
-                <span className="w-6 h-6 rounded-full border flex items-center justify-center text-xs border-current">2</span>
+              <div className="w-4 sm:w-6 h-[1px] bg-slate-800 shrink-0" />
+              <div className={`flex items-center gap-1.5 sm:gap-2 ${step === 'PAYMENT' ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border flex items-center justify-center text-[10px] sm:text-xs border-current shrink-0">2</span>
                 <span>UPI Checkout</span>
               </div>
-              <div className="w-6 h-[1px] bg-slate-800" />
-              <div className={`flex items-center gap-2 ${step === 'STORE_SETUP' ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
-                <span className="w-6 h-6 rounded-full border flex items-center justify-center text-xs border-current">3</span>
+              <div className="w-4 sm:w-6 h-[1px] bg-slate-800 shrink-0" />
+              <div className={`flex items-center gap-1.5 sm:gap-2 ${step === 'STORE_SETUP' ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border flex items-center justify-center text-[10px] sm:text-xs border-current shrink-0">3</span>
                 <span>Setup & Launch</span>
               </div>
             </div>

@@ -198,16 +198,16 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-24">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-24 overflow-x-hidden w-full">
       {/* Platform Branding & Merchant Callout */}
-      <div className="bg-slate-950 text-slate-300 px-4 py-2 text-xs flex items-center justify-between border-b border-slate-800">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+      <div className="bg-slate-950 text-slate-300 px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-2 border-b border-slate-800 text-center sm:text-left">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
           <span>⚡ Powered by <strong className="text-white">AmazingDeal</strong> — Online Hyperlocal Storefront</span>
         </div>
         <a
           href={window.location.origin}
-          className="text-emerald-400 hover:text-emerald-300 font-bold underline flex items-center gap-1 text-[11px] sm:text-xs"
+          className="text-emerald-400 hover:text-emerald-300 font-bold underline flex items-center gap-1 text-[10px] sm:text-xs shrink-0"
         >
           <span>Create Your Own Store (0% Commission)</span>
           <ArrowRight className="w-3.5 h-3.5" />
