@@ -308,13 +308,18 @@ export function MerchantLandingPage() {
       }
 
       const options = {
-        key: order.keyId,
+        key: order.keyId || 'rzp_test_TM5arepb23gG9I',
         amount: order.amountInPaise,
         currency: order.currency || 'INR',
         name: order.companyName || 'AmazingDeal',
         description: `Store Subscription - ${selectedPlan.name} Plan`,
         image: 'https://amazingdeal.co.in/favicon.ico',
-        order_id: order.orderId && !order.orderId.startsWith('order_mock_') ? order.orderId : undefined,
+        order_id:
+          order.orderId &&
+          !order.orderId.startsWith('order_mock_') &&
+          !order.orderId.startsWith('order_rzp_')
+            ? order.orderId
+            : undefined,
         prefill: {
           name: merchantName,
           email: ownerEmail,

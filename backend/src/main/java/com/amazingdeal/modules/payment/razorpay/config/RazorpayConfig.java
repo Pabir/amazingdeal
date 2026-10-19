@@ -11,10 +11,10 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RazorpayConfig {
 
-    @Value("${app.razorpay.key-id:rzp_test_amazingdeal2026}")
+    @Value("${app.razorpay.key-id:rzp_test_TM5arepb23gG9I}")
     private String keyId;
 
-    @Value("${app.razorpay.key-secret:secret_amazingdeal_test_key}")
+    @Value("${app.razorpay.key-secret:2fbcu6X8Xkf26eKrPR8RkIGL}")
     private String keySecret;
 
     @Bean

@@ -218,7 +218,7 @@ export class StoreApi {
     const orderId = 'order_mock_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
     return {
       orderId,
-      keyId: 'rzp_test_amazingdeal2026',
+      keyId: 'rzp_test_TM5arepb23gG9I',
       amountInPaise: Math.round(data.amount * 100),
       amountInRupees: data.amount,
       currency: data.currency || 'INR',
@@ -267,7 +267,7 @@ export class StoreApi {
       // quiet fallback
     }
     return {
-      keyId: 'rzp_test_amazingdeal2026',
+      keyId: 'rzp_test_TM5arepb23gG9I',
       companyName: 'AmazingDeal',
       currency: 'INR',
     };
