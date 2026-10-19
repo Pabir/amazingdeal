@@ -1,10 +1,25 @@
 import { CustomerAddress, CustomerAuthSession, CustomerProfile, OrderResponse } from '../types';
 
-const API_BASE =
-  import.meta.env.VITE_API_URL ||
-  (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')
-    ? 'https://amazingdeal-backend.onrender.com'
-    : 'http://localhost:8080');
+const getApiBase = (): string => {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host.includes('localhost') || host.includes('127.0.0.1')) {
+      return 'http://localhost:8080';
+    }
+    if (host.includes('workers.dev') || host.includes('pages.dev')) {
+      return 'https://amazingdeal-backend.onrender.com';
+    }
+  }
+
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl && !envUrl.includes('api.amazingdeal.co.in')) {
+    return envUrl;
+  }
+
+  return 'https://amazingdeal-backend.onrender.com';
+};
+
+const API_BASE = getApiBase();
 
 export class CustomerAuthApi {
   public static async verifyWithBackend(payload: {

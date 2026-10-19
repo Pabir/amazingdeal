@@ -49,7 +49,7 @@ jobs:
           npm ci
           npm run build
         env:
-          VITE_API_URL: https://api.amazingdeal.co.in
+          VITE_API_URL: https://amazingdeal-backend.onrender.com
 
       - name: Deploy to Cloudflare Workers (amazingdeal-admin)
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
@@ -92,7 +92,7 @@ jobs:
           npm ci
           npm run build
         env:
-          VITE_API_URL: https://api.amazingdeal.co.in
+          VITE_API_URL: https://amazingdeal-backend.onrender.com
 
       - name: Deploy to Cloudflare Workers (amazingdeal-storefront)
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
