@@ -34,6 +34,6 @@ public class RegisterStoreRequest {
     private String storeAddress;
     private String upiVpa; // e.g. "sharma@okaxis"
     private String subscriptionPlan; // MONTHLY, QUARTERLY, YEARLY
-    private String subscriptionPaymentRef; // PayU txnid or payment ref
+    private String subscriptionPaymentRef; // Razorpay payment ID (e.g., pay_xxx) or reference
 }
 

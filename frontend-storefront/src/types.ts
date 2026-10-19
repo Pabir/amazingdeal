@@ -103,63 +103,51 @@ export interface SubdomainCheckResponse {
   message: string;
 }
 
-export interface PayUInitiateResponse {
-  actionUrl: string;
-  key: string;
-  txnid: string;
-  amount: string;
-  productinfo: string;
-  firstname: string;
-  email: string;
-  phone: string;
-  surl: string;
-  furl: string;
-  hash: string;
-  udf1: string;
-  udf2: string;
-  udf3: string;
-  udf4: string;
-  udf5: string;
-}
-
-export interface PayUVerifyResponse {
-  verified: boolean;
-  status: string;
-  txnid: string;
+export interface RazorpayCreateOrderRequest {
   planId: string;
-  subdomain: string;
-  message: string;
+  amount: number;
+  firstname: string;
+  email?: string;
+  phone?: string;
+  subdomain?: string;
+  storeName?: string;
+  currency?: string;
 }
 
-export interface YoupiInitiateResponse {
+export interface RazorpayCreateOrderResponse {
   orderId: string;
-  paymentId: string;
-  amount: number;
+  keyId: string;
+  amountInPaise: number;
+  amountInRupees: number;
   currency: string;
   planId: string;
   subdomain: string;
   storeName: string;
-  upiUri: string;
-  upiQrBase64: string;
-  merchantVpa: string;
-  merchantName: string;
-  checkoutUrl: string;
-  statusUrl: string;
-  status: string; // PENDING, SUCCESS, FAILED, EXPIRED
-  gatewayOnline: boolean;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  companyName: string;
+}
+
+export interface RazorpayVerifyRequest {
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature?: string;
+  planId?: string;
+  subdomain?: string;
+}
+
+export interface RazorpayVerifyResponse {
+  verified: boolean;
+  status: string;
+  orderId: string;
+  paymentId: string;
+  planId: string;
+  subdomain: string;
   message: string;
 }
 
-export interface YoupiStatusResponse {
-  orderId: string;
-  status: string;
-  verified: boolean;
-  amount: number;
-  utr?: string;
-  planId?: string;
-  subdomain?: string;
-  message: string;
-}
+
 
 export interface MerchantRegisterRequest {
   storeName: string;

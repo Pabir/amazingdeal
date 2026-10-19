@@ -5,10 +5,6 @@
       "headers": {
         "Authorization": "Bearer rnd_sF9fegsbX1Gmrgent2LGGnnqSsQU"
       }
-    },
-    "payu-developer-mcp": {
-      "type": "http",
-      "url": "https://ask-ai-mcp-710575177112.asia-south1.run.app/mcp"
     }
   }
 }

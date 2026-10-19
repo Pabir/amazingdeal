@@ -65,20 +65,13 @@ app:
     whatsapp:
       api-token: ${WHATSAPP_API_TOKEN:}
       phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
-  payu:
-    key: ${PAYU_KEY:uiw0jf}
-    salt: ${PAYU_SALT:saPx7EYtKYEEgOuBSjyoVvrncKIjZ2LJ}
-    mode: ${PAYU_MODE:production}
-    surl: ${PAYU_SURL:https://amazingdeal-backend.onrender.com/api/v1/payu/callback}
-    furl: ${PAYU_FURL:https://amazingdeal-backend.onrender.com/api/v1/payu/callback}
-    frontend-url: ${PAYU_FRONTEND_URL:https://amazingdeal-storefront.drskpabirulislam1995.workers.dev}
-  youpi:
-    api-url: ${YOUPI_API_URL:http://localhost:6100}
-    merchant-id: ${YOUPI_MERCHANT_ID:amazingdeal-master}
-    webhook-secret: ${YOUPI_WEBHOOK_SECRET:d32f5430f516780e22540e47b4706a2ffc82f8a656fc9dacbdbb134e1b679c36}
-    merchant-vpa: ${YOUPI_MERCHANT_VPA:8981829273@ybl}
-    merchant-name: ${YOUPI_MERCHANT_NAME:AmazingDeal Platform}
-    checkout-url: ${YOUPI_CHECKOUT_URL:http://localhost:7000}
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:rzp_test_amazingdeal2026}
+    key-secret: ${RAZORPAY_KEY_SECRET:secret_amazingdeal_test_key}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:whsec_amazingdeal2026}
+    currency: ${RAZORPAY_CURRENCY:INR}
+    company-name: ${RAZORPAY_COMPANY_NAME:AmazingDeal}
+
 
 management:
   endpoints:

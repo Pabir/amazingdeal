@@ -1,4 +1,4 @@
-package com.amazingdeal.modules.payu.dto;
+package com.amazingdeal.modules.payment.razorpay.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,10 +9,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PayUVerifyResponse {
+public class RazorpayVerifyResponse {
+
     private boolean verified;
-    private String status;
-    private String txnid;
+    private String status; // "PAID", "FAILED"
+    private String orderId;
+    private String paymentId;
     private String planId;
     private String subdomain;
     private String message;

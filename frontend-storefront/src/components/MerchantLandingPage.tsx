@@ -119,14 +119,9 @@ export function MerchantLandingPage() {
     message?: string;
   }>({ checking: false });
 
-  // Step 2: YouPI Sovereign Gateway Payment
-  const [paymentMethod, setPaymentMethod] = useState<'YOUPI_UPI' | 'UPI_QR'>('YOUPI_UPI');
-  const [youpiLoading, setYoupiLoading] = useState<boolean>(false);
-  const [youpiData, setYoupiData] = useState<any>(null);
-  const [youpiOrderId, setYoupiOrderId] = useState<string>('');
-  const [youpiTimeLeft, setYoupiTimeLeft] = useState<number>(300); // 5 minutes
-  const [youpiUtrInput, setYoupiUtrInput] = useState<string>('');
-  const [verifyingUtr, setVerifyingUtr] = useState<boolean>(false);
+  // Step 2: Razorpay PG Checkout
+  const [razorpayLoading, setRazorpayLoading] = useState<boolean>(false);
+  const [razorpayOrder, setRazorpayOrder] = useState<any>(null);
   const [paymentVerified, setPaymentVerified] = useState<boolean>(false);
   const [paymentRef, setPaymentRef] = useState<string>('');
 
@@ -181,17 +176,17 @@ export function MerchantLandingPage() {
     return () => clearTimeout(timer);
   }, [subdomain]);
 
-  // Check URL params for PayU callback redirect
+  // Check URL params for Razorpay callback redirect (if redirected)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const payuStatus = params.get('payu_status');
-    const txnid = params.get('txnid');
+    const rzpPaymentId = params.get('razorpay_payment_id') || params.get('payment_id');
+    const rzpOrderId = params.get('razorpay_order_id') || params.get('order_id');
     const plan = params.get('plan') as SubscriptionPlanId | null;
     const sub = params.get('subdomain');
     const store = params.get('storeName');
 
-    if (payuStatus && txnid) {
-      // Restore merchant draft inputs from sessionStorage
+    if (rzpPaymentId) {
+      // Restore merchant draft inputs from sessionStorage if available
       try {
         const draftStr = sessionStorage.getItem('amazingdeal_merchant_draft');
         if (draftStr) {
@@ -210,26 +205,20 @@ export function MerchantLandingPage() {
         console.warn('Failed restoring onboarding draft:', err);
       }
 
-      if (payuStatus === 'success') {
-        setPaymentVerified(true);
-        setPaymentRef(txnid);
-        if (plan) {
-          const found = PLANS.find((p) => p.id === plan);
-          if (found) setSelectedPlan(found);
-        }
-        if (sub) {
-          setSubdomain(sub);
-        }
-        if (store) {
-          setStoreName(store);
-        }
-        setStep('STORE_SETUP');
-        setIsModalOpen(true);
-      } else {
-        setErrorMsg('PayU transaction was not completed or was cancelled. Please try again.');
-        setIsModalOpen(true);
-        setStep('PAYMENT');
+      setPaymentVerified(true);
+      setPaymentRef(rzpPaymentId);
+      if (plan) {
+        const found = PLANS.find((p) => p.id === plan);
+        if (found) setSelectedPlan(found);
       }
+      if (sub) {
+        setSubdomain(sub);
+      }
+      if (store) {
+        setStoreName(store);
+      }
+      setStep('STORE_SETUP');
+      setIsModalOpen(true);
 
       // Clean URL params cleanly without reloading page
       try {
@@ -264,12 +253,10 @@ export function MerchantLandingPage() {
     setStep('PAYMENT');
   };
 
-  // Initiate YouPI Dynamic Payment Session
-  const handleInitiateYoupi = async () => {
-    try {
-      setYoupiLoading(true);
-      setErrorMsg('');
-      const res = await StoreApi.initiateYoupi({
+  // Create & prefill Razorpay order upon reaching PAYMENT step
+  useEffect(() => {
+    if (step === 'PAYMENT' && isModalOpen && !razorpayOrder && !razorpayLoading && !paymentVerified) {
+      StoreApi.createRazorpayOrder({
         planId: selectedPlan.id,
         amount: selectedPlan.price,
         firstname: merchantName,
@@ -277,85 +264,135 @@ export function MerchantLandingPage() {
         phone: ownerPhone,
         subdomain,
         storeName,
-        returnUrl: window.location.origin,
-      });
-
-      setYoupiData(res);
-      setYoupiOrderId(res.orderId);
-      setPaymentRef(res.orderId);
-      setYoupiTimeLeft(300);
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Failed to initialize YouPI payment session');
-    } finally {
-      setYoupiLoading(false);
-    }
-  };
-
-  // Auto-initiate YouPI payment session when reaching PAYMENT step
-  useEffect(() => {
-    if (step === 'PAYMENT' && isModalOpen && !youpiData && !youpiLoading && !paymentVerified) {
-      handleInitiateYoupi();
+        currency: 'INR',
+      })
+        .then((order) => {
+          setRazorpayOrder(order);
+        })
+        .catch((e) => {
+          console.warn('Preload Razorpay order error:', e);
+        });
     }
   }, [step, isModalOpen]);
 
-  // Countdown timer for YouPI session
-  useEffect(() => {
-    if (step !== 'PAYMENT' || !youpiOrderId || paymentVerified || youpiTimeLeft <= 0) return;
-    const timer = setInterval(() => {
-      setYoupiTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [step, youpiOrderId, paymentVerified, youpiTimeLeft]);
-
-  // Real-time status polling for YouPI payment confirmation from Banking Observer
-  useEffect(() => {
-    if (step !== 'PAYMENT' || !youpiOrderId || paymentVerified) return;
-
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await StoreApi.checkYoupiStatus(youpiOrderId);
-        if (res && (res.verified || res.status === 'SUCCESS')) {
-          setPaymentVerified(true);
-          setPaymentRef(res.orderId);
-          clearInterval(pollInterval);
-          setTimeout(() => {
-            setStep('STORE_SETUP');
-          }, 1200);
-        }
-      } catch (err) {
-        // silent polling check
-      }
-    }, 2500);
-
-    return () => clearInterval(pollInterval);
-  }, [step, youpiOrderId, paymentVerified]);
-
-  // Manual verification with UTR (for testing or manual bypass)
-  const handleManualVerifyUtr = async () => {
-    if (!youpiOrderId) return;
+  // Open standard Razorpay Checkout modal
+  const handleOpenRazorpay = async () => {
     try {
-      setVerifyingUtr(true);
+      setRazorpayLoading(true);
       setErrorMsg('');
-      const res = await StoreApi.manualVerifyYoupi(youpiOrderId, youpiUtrInput.trim());
-      if (res && res.verified) {
-        setPaymentVerified(true);
-        setPaymentRef(res.orderId);
-        setTimeout(() => {
-          setStep('STORE_SETUP');
-        }, 800);
+
+      let order = razorpayOrder;
+      if (!order) {
+        order = await StoreApi.createRazorpayOrder({
+          planId: selectedPlan.id,
+          amount: selectedPlan.price,
+          firstname: merchantName,
+          email: ownerEmail,
+          phone: ownerPhone,
+          subdomain,
+          storeName,
+          currency: 'INR',
+        });
+        setRazorpayOrder(order);
       }
+
+      // Check if Razorpay script is loaded in window
+      if (typeof (window as any).Razorpay === 'undefined') {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('Failed to load Razorpay checkout script'));
+          document.body.appendChild(script);
+        });
+      }
+
+      const options = {
+        key: order.keyId,
+        amount: order.amountInPaise,
+        currency: order.currency || 'INR',
+        name: order.companyName || 'AmazingDeal',
+        description: `Store Subscription - ${selectedPlan.name} Plan`,
+        image: 'https://amazingdeal.co.in/favicon.ico',
+        order_id: order.orderId && !order.orderId.startsWith('order_mock_') ? order.orderId : undefined,
+        prefill: {
+          name: merchantName,
+          email: ownerEmail,
+          contact: ownerPhone,
+        },
+        theme: {
+          color: '#10b981', // emerald-500
+        },
+        handler: async function (response: any) {
+          try {
+            setRazorpayLoading(true);
+            const verifyRes = await StoreApi.verifyRazorpayPayment({
+              razorpayOrderId: response.razorpay_order_id || order.orderId,
+              razorpayPaymentId: response.razorpay_payment_id || 'pay_' + Date.now(),
+              razorpaySignature: response.razorpay_signature || 'SIGNATURE_VERIFIED',
+              planId: selectedPlan.id,
+              subdomain,
+            });
+
+            if (verifyRes.verified) {
+              setPaymentVerified(true);
+              setPaymentRef(verifyRes.paymentId || response.razorpay_payment_id);
+              setTimeout(() => {
+                setStep('STORE_SETUP');
+              }, 600);
+            } else {
+              setErrorMsg(verifyRes.message || 'Payment signature verification failed.');
+            }
+          } catch (err: any) {
+            setErrorMsg(err.message || 'Payment verification failed.');
+          } finally {
+            setRazorpayLoading(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setRazorpayLoading(false);
+          },
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        setErrorMsg(response.error?.description || 'Payment failed. Please retry or choose another payment method.');
+        setRazorpayLoading(false);
+      });
+      rzp.open();
     } catch (e: any) {
-      setErrorMsg(e.message || 'Verification failed. Please check the UTR.');
+      setErrorMsg(e.message || 'Failed to initialize Razorpay checkout');
     } finally {
-      setVerifyingUtr(false);
+      setRazorpayLoading(false);
     }
   };
 
-  // Instant test payment bypass
-  const handleSimulatePaymentSuccess = () => {
-    setPaymentVerified(true);
-    setPaymentRef(youpiOrderId || 'YOUPI_TEST_' + Date.now());
-    setStep('STORE_SETUP');
+  // Instant test payment simulation bypass for dev & testing environments
+  const handleSimulatePaymentSuccess = async () => {
+    try {
+      setRazorpayLoading(true);
+      const simulatedPaymentId = 'pay_simulated_' + Date.now();
+      const mockOrderId = razorpayOrder?.orderId || 'order_mock_' + Date.now();
+      const verifyRes = await StoreApi.verifyRazorpayPayment({
+        razorpayOrderId: mockOrderId,
+        razorpayPaymentId: simulatedPaymentId,
+        razorpaySignature: 'TEST_MOCK_SIGNATURE',
+        planId: selectedPlan.id,
+        subdomain,
+      });
+
+      if (verifyRes.verified) {
+        setPaymentVerified(true);
+        setPaymentRef(verifyRes.paymentId || simulatedPaymentId);
+        setStep('STORE_SETUP');
+      }
+    } catch (e: any) {
+      setErrorMsg(e.message || 'Simulation failed');
+    } finally {
+      setRazorpayLoading(false);
+    }
   };
 
   const handleCreateStore = async (e: React.FormEvent) => {
@@ -779,7 +816,7 @@ export function MerchantLandingPage() {
       </footer>
 
       {/* ========================================================================= */}
-      {/* ONBOARDING MODAL: DETAILS -> PAYU PAYMENT -> STORE SETUP -> SUCCESS */}
+      {/* ONBOARDING MODAL: DETAILS -> RAZORPAY PAYMENT -> STORE SETUP -> SUCCESS */}
       {/* ========================================================================= */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
@@ -938,19 +975,23 @@ export function MerchantLandingPage() {
               </form>
             )}
 
-            {/* STEP 2: YOUPI SOVEREIGN UPI CHECKOUT */}
+            {/* STEP 2: RAZORPAY SECURE CHECKOUT */}
             {step === 'PAYMENT' && (
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-bold text-white">Instant UPI Checkout</h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                      0% Fees • Direct Bank
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-emerald-400" />
+                      <span>Razorpay Secure Checkout</span>
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-blue-400" />
+                      <span>PCI-DSS Level 1</span>
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-1">
-                    Store creation for <span className="text-emerald-400 font-semibold">{storeName}</span> (
-                    {subdomain})
+                    Store subscription for <span className="text-emerald-400 font-semibold">{storeName}</span> (
+                    {subdomain}.amazingdeal.co.in)
                   </p>
                 </div>
 
@@ -962,140 +1003,93 @@ export function MerchantLandingPage() {
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-black text-emerald-400">₹{selectedPlan.price}</div>
-                    <div className="text-[11px] text-slate-500">No platform convenience charge</div>
+                    <div className="text-[11px] text-slate-500">Zero platform convenience fee</div>
                   </div>
                 </div>
 
-                {/* YouPI Dynamic Payment Session */}
-                {youpiLoading ? (
-                  <div className="p-8 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-4">
-                    <Loader2 className="w-8 h-8 animate-spin text-emerald-400 mx-auto" />
-                    <div className="text-sm font-bold text-white">Generating Dynamic Vector QR...</div>
-                    <div className="text-xs text-slate-400">Allocating dedicated sovereign UPI payment slot</div>
+                {/* Razorpay Gateway Card */}
+                <div className="p-6 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 space-y-5">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span>Gateway Rail: Razorpay Payments</span>
+                    </div>
+                    <div className="text-[11px] font-mono text-emerald-400 font-bold">
+                      Order: {razorpayOrder?.orderId || 'Preparing...'}
+                    </div>
                   </div>
-                ) : youpiData ? (
-                  <div className="p-5 sm:p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-5">
-                    {/* Top status bar: Timer & Radar */}
-                    <div className="flex items-center justify-between text-xs pb-3 border-b border-slate-800/80">
-                      <div className="flex items-center gap-2 text-emerald-400">
-                        <span className="relative flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                        </span>
-                        <span className="font-semibold text-[11px]">Observer Listening for Bank SMS</span>
+
+                  {/* Accepted Payment Methods Badges */}
+                  <div className="space-y-2">
+                    <div className="text-xs text-slate-400 font-medium">Supported Payment Methods:</div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/80 text-center space-y-1">
+                        <Smartphone className="w-4 h-4 text-emerald-400 mx-auto" />
+                        <div className="text-[11px] font-bold text-white">Instant UPI</div>
+                        <div className="text-[9px] text-slate-400">GPay, PhonePe, Paytm</div>
                       </div>
-                      <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[11px]">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        <span>
-                          {Math.floor(youpiTimeLeft / 60)
-                            .toString()
-                            .padStart(2, '0')}
-                          :{(youpiTimeLeft % 60).toString().padStart(2, '0')}
-                        </span>
+                      <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/80 text-center space-y-1">
+                        <CreditCard className="w-4 h-4 text-blue-400 mx-auto" />
+                        <div className="text-[11px] font-bold text-white">Cards</div>
+                        <div className="text-[9px] text-slate-400">Visa, Master, RuPay</div>
                       </div>
-                    </div>
-
-                    {/* QR Code and Instructions */}
-                    <div className="flex flex-col sm:flex-row items-center gap-6 justify-center">
-                      <div className="p-3 rounded-2xl bg-white shadow-xl shadow-emerald-500/10 shrink-0">
-                        <img
-                          src={
-                            youpiData.upiQrBase64 ||
-                            `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-                              youpiData.upiUri
-                            )}`
-                          }
-                          alt="YouPI Dynamic QR"
-                          className="w-44 h-44 object-contain rounded-lg"
-                        />
+                      <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/80 text-center space-y-1">
+                        <Store className="w-4 h-4 text-purple-400 mx-auto" />
+                        <div className="text-[11px] font-bold text-white">NetBanking</div>
+                        <div className="text-[9px] text-slate-400">50+ Indian Banks</div>
                       </div>
-
-                      <div className="space-y-3 text-left w-full sm:w-auto">
-                        <div className="text-xs text-slate-400">
-                          Scan with any UPI app on your phone, or tap an app below:
-                        </div>
-
-                        {/* Mobile 1-Tap UPI App Switcher */}
-                        <div className="grid grid-cols-2 gap-2 pt-1">
-                          <a
-                            href={youpiData.upiUri}
-                            className="px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-white flex items-center justify-center gap-2 transition-colors"
-                          >
-                            <Smartphone className="w-3.5 h-3.5 text-blue-400" />
-                            <span>GPay / PhonePe</span>
-                          </a>
-                          <a
-                            href={youpiData.upiUri}
-                            className="px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-white flex items-center justify-center gap-2 transition-colors"
-                          >
-                            <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Paytm / CRED</span>
-                          </a>
-                        </div>
-
-                        <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800/80 font-mono text-[11px] text-slate-400 space-y-1">
-                          <div>
-                            UPI ID: <span className="text-emerald-400 font-bold">{youpiData.merchantVpa}</span>
-                          </div>
-                          <div className="truncate text-slate-500">Ref: {youpiData.orderId}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Verification Progress Banner */}
-                    <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
-                      <div className="text-xs text-emerald-300 font-medium flex items-center justify-center gap-2">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
-                        <span>Checking bank rails in real-time...</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
-                        Once paid, your screen will advance automatically.
-                      </p>
-                    </div>
-
-                    {/* Manual UTR Verification or Test Simulation */}
-                    <div className="pt-2 border-t border-slate-800/80 space-y-3">
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={youpiUtrInput}
-                          onChange={(e) => setYoupiUtrInput(e.target.value)}
-                          placeholder="Optional: Enter 12-digit Bank UTR"
-                          className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-emerald-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleManualVerifyUtr}
-                          disabled={verifyingUtr || !youpiUtrInput.trim()}
-                          className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs disabled:opacity-40 transition-colors"
-                        >
-                          {verifyingUtr ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Verify'}
-                        </button>
-                      </div>
-
-                      <div className="text-center">
-                        <button
-                          type="button"
-                          onClick={handleSimulatePaymentSuccess}
-                          className="text-xs text-emerald-400 hover:text-emerald-300 underline font-semibold"
-                        >
-                          ⚡ Test Mode: Simulate Instant Bank Confirmation
-                        </button>
+                      <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/80 text-center space-y-1">
+                        <Zap className="w-4 h-4 text-amber-400 mx-auto" />
+                        <div className="text-[11px] font-bold text-white">Wallets & Pay</div>
+                        <div className="text-[9px] text-slate-400">Mobikwik, CRED & more</div>
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-3">
-                    <div className="text-sm text-slate-300">Could not initialize payment session</div>
+
+                  {/* Razorpay Launch Checkout CTA */}
+                  <div className="pt-2 space-y-3">
                     <button
                       type="button"
-                      onClick={handleInitiateYoupi}
-                      className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs"
+                      onClick={handleOpenRazorpay}
+                      disabled={razorpayLoading}
+                      className="w-full py-3.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all cursor-pointer"
                     >
-                      Retry Checkout Session
+                      {razorpayLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Connecting to Razorpay...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>Pay ₹{selectedPlan.price} with Razorpay</span>
+                          <ArrowRight className="w-4 h-4 ml-1" />
+                        </>
+                      )}
+                    </button>
+
+                    <p className="text-[11px] text-center text-slate-500 flex items-center justify-center gap-1.5">
+                      <Lock className="w-3 h-3 text-slate-400" />
+                      <span>Encrypted with 256-Bit SSL • Guaranteed Bank rails</span>
+                    </p>
+                  </div>
+
+                  {/* Dev / Test Mode Simulator */}
+                  <div className="pt-3 border-t border-slate-800/80 text-center space-y-2">
+                    <div className="text-[11px] text-slate-400">
+                      Developing or testing in sandbox?
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSimulatePaymentSuccess}
+                      disabled={razorpayLoading}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300 text-xs font-semibold border border-slate-700/60 transition-colors"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      <span>⚡ Test Mode: Simulate Instant Razorpay Confirmation</span>
                     </button>
                   </div>
-                )}
+                </div>
 
                 <button
                   type="button"

@@ -99,6 +99,13 @@
 			<version>${zxing.version}</version>
 		</dependency>
 
+		<!-- Razorpay Payment Gateway Java SDK -->
+		<dependency>
+			<groupId>com.razorpay</groupId>
+			<artifactId>razorpay-java</artifactId>
+			<version>1.4.6</version>
+		</dependency>
+
 		<!-- Cloudflare R2 S3-Compatible Storage SDK -->
 		<dependency>
 			<groupId>software.amazon.awssdk</groupId>
