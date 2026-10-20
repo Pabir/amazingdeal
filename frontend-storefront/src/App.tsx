@@ -193,33 +193,6 @@ export function App() {
     setIsCartOpen(true);
   };
 
-  useEffect(() => {
-    // If user navigated to admin.amazingdeal.co.in but Cloudflare wildcard routed to storefront,
-    // automatically bounce them to the live Admin Worker dashboard
-    const host = window.location.hostname.toLowerCase();
-    if (host.startsWith('admin.')) {
-      window.location.replace('https://amazingdeal-admin.drskpabirulislam1995.workers.dev');
-    }
-  }, []);
-
-  if (typeof window !== 'undefined' && window.location.hostname.toLowerCase().startsWith('admin.')) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-4">
-        <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4" />
-        <h2 className="text-xl font-bold">Redirecting to Merchant Admin Portal...</h2>
-        <p className="text-sm text-slate-400 mt-2">
-          If you are not redirected automatically,{' '}
-          <a
-            href="https://amazingdeal-admin.drskpabirulislam1995.workers.dev"
-            className="text-emerald-400 underline font-semibold"
-          >
-            click here to open Admin Login
-          </a>.
-        </p>
-      </div>
-    );
-  }
-
   if (!subdomain) {
     return <MerchantLandingPage />;
   }
