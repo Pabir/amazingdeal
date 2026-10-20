@@ -500,6 +500,16 @@ export function MerchantLandingPage() {
               <span className="md:hidden">Demo</span>
             </button>
 
+            {/* Merchant Login Button */}
+            <a
+              href="https://amazingdeal-admin.drskpabirulislam1995.workers.dev"
+              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-900/90 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 hover:border-emerald-400 transition-all items-center gap-1.5 flex shrink-0 whitespace-nowrap shadow-sm"
+              title="Merchant Admin Sign In"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Merchant Login</span>
+            </a>
+
             {/* Start Free Trial CTA */}
             <button
               onClick={() => openPlanModal(PLANS[1])}
@@ -560,6 +570,14 @@ export function MerchantLandingPage() {
             </nav>
 
             <div className="pt-3 border-t border-slate-800/80 space-y-2">
+              <a
+                href="https://amazingdeal-admin.drskpabirulislam1995.workers.dev"
+                className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-2"
+              >
+                <Lock className="w-4 h-4 text-emerald-400" />
+                <span>Merchant Admin Login</span>
+              </a>
+
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
