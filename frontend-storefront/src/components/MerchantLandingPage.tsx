@@ -502,7 +502,7 @@ export function MerchantLandingPage() {
 
             {/* Merchant Login Button */}
             <a
-              href="https://amazingdeal-admin.drskpabirulislam1995.workers.dev"
+              href="https://admin.amazingdeal.co.in"
               className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-900/90 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 hover:border-emerald-400 transition-all items-center gap-1.5 flex shrink-0 whitespace-nowrap shadow-sm"
               title="Merchant Admin Sign In"
             >
@@ -571,7 +571,7 @@ export function MerchantLandingPage() {
 
             <div className="pt-3 border-t border-slate-800/80 space-y-2">
               <a
-                href="https://amazingdeal-admin.drskpabirulislam1995.workers.dev"
+                href="https://admin.amazingdeal.co.in"
                 className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-2"
               >
                 <Lock className="w-4 h-4 text-emerald-400" />
@@ -1380,7 +1380,7 @@ export function MerchantLandingPage() {
                   </button>
 
                   <a
-                    href="https://amazingdeal-admin.drskpabirulislam1995.workers.dev"
+                    href="https://admin.amazingdeal.co.in"
                     target="_blank"
                     rel="noreferrer"
                     className="w-full py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm border border-slate-700 transition-all flex items-center justify-center gap-2"
