@@ -108,8 +108,9 @@ public class AiCatalogGeneratorService {
                 "content", "You are an expert e-commerce catalog creator. Output ONLY valid JSON conforming to the requested schema."
         );
 
+        String selectedModel = "gpt-4o-mini";
         Map<String, Object> requestPayload = Map.of(
-                "model", "gpt-4o",
+                "model", selectedModel,
                 "messages", List.of(systemMessage, userMessage),
                 "response_format", Map.of("type", "json_object"),
                 "max_tokens", 800,
@@ -117,7 +118,22 @@ public class AiCatalogGeneratorService {
         );
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestPayload, headers);
-        ResponseEntity<String> response = restTemplate.postForEntity(endpoint, entity, String.class);
+        ResponseEntity<String> response;
+        try {
+            response = restTemplate.postForEntity(endpoint, entity, String.class);
+        } catch (Exception e) {
+            log.warn("gpt-4o-mini attempt failed ({}), attempting gpt-4o fallback: {}", e.getMessage(), e.toString());
+            selectedModel = "gpt-4o";
+            requestPayload = Map.of(
+                    "model", selectedModel,
+                    "messages", List.of(systemMessage, userMessage),
+                    "response_format", Map.of("type", "json_object"),
+                    "max_tokens", 800,
+                    "temperature", 0.2
+            );
+            entity = new HttpEntity<>(requestPayload, headers);
+            response = restTemplate.postForEntity(endpoint, entity, String.class);
+        }
 
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
             JsonNode root = objectMapper.readTree(response.getBody());
@@ -126,7 +142,7 @@ public class AiCatalogGeneratorService {
 
             String poweredBy = Boolean.TRUE.equals(tenant.getChatgptConnected())
                     ? "ChatGPT " + (tenant.getChatgptPlanTier() != null ? tenant.getChatgptPlanTier() : "Plus") + " (" + tenant.getChatgptAccountEmail() + ")"
-                    : "Custom OpenAI Key (sk-...)";
+                    : "Personal OpenAI Key (" + selectedModel + ")";
 
             List<String> tags = new ArrayList<>();
             if (productJson.has("tags") && productJson.get("tags").isArray()) {

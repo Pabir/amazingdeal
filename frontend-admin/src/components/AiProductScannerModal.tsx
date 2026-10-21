@@ -224,79 +224,87 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
           </button>
         </div>
 
-        {/* ChatGPT Plan Status Ribbon */}
+        {/* OpenAI Key / Status Ribbon */}
         <div className="bg-slate-50 border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
-          {chatGptStatus?.connected ? (
+          {chatGptStatus?.hasCustomApiKey ? (
+            <div className="flex items-center space-x-2 text-emerald-800 font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <Key className="w-3.5 h-3.5 text-emerald-600" />
+              <span>
+                Personal OpenAI Key Active: <strong className="font-mono text-emerald-950">{chatGptStatus.maskedApiKey}</strong>
+              </span>
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                GPT-4o Vision
+              </span>
+            </div>
+          ) : chatGptStatus?.connected ? (
             <div className="flex items-center space-x-2 text-emerald-800 font-semibold">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>
-                Connected to <strong className="text-emerald-950">{chatGptStatus.planTier || 'ChatGPT Plus'}</strong> ({chatGptStatus.accountEmail})
+                Demo Mode Active: <strong className="text-emerald-950">{chatGptStatus.planTier}</strong>
               </span>
               <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                Zero Platform Cost
+                Simulation Test
               </span>
-            </div>
-          ) : chatGptStatus?.hasCustomApiKey ? (
-            <div className="flex items-center space-x-2 text-slate-700 font-semibold">
-              <Key className="w-3.5 h-3.5 text-amber-500" />
-              <span>Using Custom OpenAI Key ({chatGptStatus.maskedApiKey})</span>
             </div>
           ) : (
             <div className="flex items-center space-x-2 text-slate-600">
-              <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <span>No ChatGPT account linked yet. You can sign in or test with instant demo mode.</span>
+              <Key className="w-3.5 h-3.5 text-amber-500" />
+              <span>Provide your OpenAI API key (BYOK) or run with instant demo mode.</span>
             </div>
           )}
 
           <div className="flex items-center space-x-2">
-            {!chatGptStatus?.connected && (
-              <div className="flex items-center space-x-1.5">
-                <button
-                  type="button"
-                  onClick={handleSignInWithChatGpt}
-                  className="inline-flex items-center space-x-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] shadow-sm transition-all"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>Sign in with ChatGPT</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSimulateConnect}
-                  className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-lg font-bold text-[11px] transition-all"
-                  title="Simulate ChatGPT Plus connection for testing"
-                >
-                  ⚡ Instant Demo Connect
-                </button>
-              </div>
+            {!chatGptStatus?.hasCustomApiKey && !chatGptStatus?.connected && (
+              <button
+                type="button"
+                onClick={handleSimulateConnect}
+                className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-lg font-bold text-[11px] transition-all flex items-center space-x-1"
+                title="Test with instant demo without entering an API key"
+              >
+                <span>⚡ Instant Demo</span>
+              </button>
             )}
+
             <button
               onClick={() => setShowKeyInput(!showKeyInput)}
-              className="text-slate-500 hover:text-slate-800 text-[11px] font-semibold underline"
+              className="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-bold text-[11px] transition-all flex items-center space-x-1"
             >
-              {showKeyInput ? 'Close Key Settings' : 'Custom Key'}
+              <Key className="w-3 h-3" />
+              <span>{showKeyInput ? 'Close' : (chatGptStatus?.hasCustomApiKey ? 'Change Key' : 'Enter API Key')}</span>
             </button>
           </div>
         </div>
 
         {/* API Key Drawer */}
         {showKeyInput && (
-          <div className="bg-amber-50/70 border-b border-amber-200 px-6 py-3 flex flex-wrap items-center gap-3 text-xs">
-            <span className="font-bold text-amber-900">Custom OpenAI API Key (BYOK):</span>
+          <div className="bg-amber-50/80 border-b border-amber-200 px-6 py-3 flex flex-wrap items-center gap-3 text-xs">
+            <div className="flex items-center space-x-1.5 font-bold text-amber-900">
+              <Key className="w-3.5 h-3.5" />
+              <span>OpenAI API Key:</span>
+            </div>
             <input
               type="password"
-              placeholder="sk-..."
+              placeholder="Paste your key (sk-...)"
               value={customKey}
               onChange={(e) => setCustomKey(e.target.value)}
-              className="flex-1 min-w-[200px] px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono"
+              className="flex-1 min-w-[200px] px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-amber-500"
             />
             <button
-              disabled={savingKey}
+              disabled={savingKey || !customKey}
               onClick={handleSaveCustomKey}
-              className="px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg font-bold text-xs"
+              className="px-3.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg font-bold text-xs disabled:opacity-40"
             >
-              {savingKey ? 'Saving...' : 'Save Key'}
+              {savingKey ? 'Saving...' : 'Save & Activate'}
             </button>
+            <a
+              href="https://platform.openai.com/api-keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-amber-800 hover:text-amber-950 underline font-semibold flex items-center space-x-1"
+            >
+              <span>Get API Key ↗</span>
+            </a>
           </div>
         )}
 
