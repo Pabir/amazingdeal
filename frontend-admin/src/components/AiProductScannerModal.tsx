@@ -250,12 +250,14 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
       setEnhancingPhoto(true);
       setError(null);
       setActiveCommandBadge(targetCmd);
+      const activeSource = imagePreview || base64Image || generatedDraft?.imageUrl || imageUrl || '';
+      const isBase64 = activeSource.startsWith('data:image');
       const res = await ApiService.enhanceProductPhoto({
         command: targetCmd,
         productTitle: generatedDraft?.title || '',
         category: generatedDraft?.category || '',
-        base64Image: base64Image || undefined,
-        currentImageUrl: imagePreview || generatedDraft?.imageUrl || undefined,
+        base64Image: isBase64 ? activeSource : (base64Image || undefined),
+        currentImageUrl: !isBase64 && activeSource ? activeSource : (imageUrl || undefined),
       });
 
       if (res.angles && res.angles.length > 0) {
@@ -275,6 +277,24 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
       setError('Failed to enhance photo: ' + err.message);
     } finally {
       setEnhancingPhoto(false);
+    }
+  };
+
+  const getAngleTransformStyle = (): React.CSSProperties => {
+    const angle = studioAngles[activeAngleIndex]?.angle || '0°';
+    switch (angle) {
+      case '45°':
+        return { transform: 'perspective(800px) rotateY(-20deg) scale(0.98)', filter: 'drop-shadow(6px 10px 14px rgba(0,0,0,0.22))' };
+      case '90°':
+        return { transform: 'perspective(800px) rotateY(-40deg) scale(0.94)', filter: 'drop-shadow(10px 12px 18px rgba(0,0,0,0.26))' };
+      case '180°':
+        return { transform: 'perspective(800px) scale(0.96) scaleX(-1)', filter: 'drop-shadow(0 10px 14px rgba(0,0,0,0.20)) brightness(0.97)' };
+      case 'Podium':
+        return { transform: 'translateY(-10px) scale(0.95)', filter: 'drop-shadow(0 14px 20px rgba(0,0,0,0.30))' };
+      case 'Macro':
+        return { transform: 'scale(1.32)', filter: 'contrast(1.08) drop-shadow(0 8px 16px rgba(0,0,0,0.25))' };
+      default:
+        return { transform: 'perspective(800px) rotateY(0deg) scale(1)', filter: 'drop-shadow(0 8px 12px rgba(0,0,0,0.18))' };
     }
   };
 
@@ -967,16 +987,26 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
                     </div>
 
                     {/* Turntable Image Display */}
-                    <div className="w-full h-52 flex items-center justify-center p-2">
+                    <div className="w-full h-56 relative flex items-center justify-center p-2 overflow-hidden">
+                      {/* Showroom Podium Pedestal base for Podium angle */}
+                      {studioAngles[activeAngleIndex]?.angle === 'Podium' && (
+                        <div className="absolute bottom-3 w-48 h-8 rounded-[50%] bg-gradient-to-r from-slate-300 via-white to-slate-300 border-2 border-slate-300/80 shadow-[0_12px_24px_rgba(0,0,0,0.28)] z-0 pointer-events-none opacity-90">
+                          <div className="w-full h-full rounded-[50%] bg-gradient-to-b from-transparent to-slate-400/25" />
+                        </div>
+                      )}
+
                       <img
                         src={
                           studioAngles[activeAngleIndex]?.imageUrl ||
                           generatedDraft.imageUrl ||
                           imagePreview ||
-                          '/studio/cargo_0_front.jpg'
+                          base64Image ||
+                          imageUrl ||
+                          ''
                         }
                         alt={generatedDraft.title}
-                        className="max-h-48 w-auto object-contain rounded-xl drop-shadow-md transition-all duration-300"
+                        style={getAngleTransformStyle()}
+                        className="max-h-48 w-auto object-contain rounded-xl relative z-10 transition-all duration-300 ease-out"
                       />
                     </div>
 

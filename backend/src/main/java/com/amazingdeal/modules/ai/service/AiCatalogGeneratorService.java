@@ -522,10 +522,36 @@ public class AiCatalogGeneratorService {
         String storeCat = tenant.getStoreCategory() != null ? tenant.getStoreCategory().toLowerCase() : "";
         String context = notes + " " + prefCat + " " + storeCat;
 
-        // Apparel / Pants / Clothing detection
+        // T-Shirt / Top / Polo detection
+        if (context.contains("tshirt") || context.contains("t-shirt") || context.contains("tee") || 
+            context.contains("shirt") || context.contains("top") || context.contains("polo")) {
+            
+            String title = "Men's Classic Combed Cotton Crew Neck T-Shirt";
+            String cat = "Apparel & Fashion";
+            List<AiPhotoAngle> angles = resolveAnglesForProduct(title, cat, displayImg);
+            String imagesJson = serializeAngles(angles);
+
+            return GeneratedProductResponse.builder()
+                    .title(title)
+                    .description("Crafted with 100% premium breathable combed cotton for all-day comfort. Features a reinforced ribbed collar, tailored fit, and pre-shrunk fabric for lasting durability.")
+                    .category(cat)
+                    .suggestedPrice(BigDecimal.valueOf(499.0))
+                    .comparePrice(BigDecimal.valueOf(899.0))
+                    .tags(List.of("T-Shirt", "Cotton Tee", "Casual Wear", "Men's Fashion", "Summer Wear"))
+                    .keyHighlights(List.of("100% Breathable Combed Cotton (180 GSM)", "Anti-Pilling & Pre-Shrunk Fabric", "Ribbed Neckline with Reinforced Seams"))
+                    .ingredientsOrSpecs("100% Combed Cotton, Regular Fit")
+                    .estimatedUnit("1 Piece")
+                    .inventoryQuantity(50)
+                    .imageUrl(displayImg)
+                    .angles(angles)
+                    .imagesJson(imagesJson)
+                    .poweredBy("Demo Mode (T-Shirt Preset)")
+                    .build();
+        }
+
+        // Pants / Trousers / Cargo detection
         if (context.contains("pant") || context.contains("trouser") || context.contains("cargo") || 
-            context.contains("jean") || context.contains("apparel") || context.contains("cloth") || 
-            context.contains("shirt") || context.contains("wear") || context.contains("fashion")) {
+            context.contains("jean") || context.contains("chinos") || context.contains("bottom")) {
             
             String title = "Men's Multi-Pocket Tactical Cargo Trousers";
             String cat = "Apparel & Clothing";
@@ -607,56 +633,20 @@ public class AiCatalogGeneratorService {
 
     /**
      * Resolves realistic, multi-angle studio perspectives for the given product.
+     * ALWAYS preserves and anchors on the merchant's actual uploaded product image!
      */
     public List<AiPhotoAngle> resolveAnglesForProduct(String title, String category, String fallbackImg) {
-        String combined = (title + " " + category).toLowerCase();
+        String base = (fallbackImg != null && !fallbackImg.isBlank())
+                ? fallbackImg
+                : "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80";
 
-        // 1. Pants, Trousers, Cargo, Denim, Apparel
-        if (combined.contains("pant") || combined.contains("trouser") || combined.contains("cargo") || 
-            combined.contains("jean") || combined.contains("bottom") || combined.contains("chinos") || combined.contains("cloth") || combined.contains("apparel")) {
-            return List.of(
-                AiPhotoAngle.builder().angle("0°").label("Front View (0°)").imageUrl("/studio/cargo_0_front.jpg").isPrimary(true).build(),
-                AiPhotoAngle.builder().angle("45°").label("Quarter Angle (45°)").imageUrl("/studio/cargo_45_quarter.jpg").isPrimary(false).build(),
-                AiPhotoAngle.builder().angle("90°").label("Side Profile (90°)").imageUrl("/studio/cargo_90_side.jpg").isPrimary(false).build(),
-                AiPhotoAngle.builder().angle("180°").label("Rear Back View (180°)").imageUrl("/studio/cargo_180_back.jpg").isPrimary(false).build(),
-                AiPhotoAngle.builder().angle("Podium").label("Showroom Podium").imageUrl("/studio/cargo_podium.jpg").isPrimary(false).build(),
-                AiPhotoAngle.builder().angle("Macro").label("Fabric Detail").imageUrl("/studio/cargo_macro.jpg").isPrimary(false).build()
-            );
-        }
-
-        // 2. Footwear / Shoes / Sneakers
-        if (combined.contains("shoe") || combined.contains("sneaker") || combined.contains("footwear") || combined.contains("boot")) {
-            return List.of(
-                AiPhotoAngle.builder().angle("0°").label("Lateral Side (0°)").imageUrl("https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80").isPrimary(true).build(),
-                AiPhotoAngle.builder().angle("45°").label("Front Quarter (45°)").imageUrl("https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=800&q=80").isPrimary(false).build(),
-                AiPhotoAngle.builder().angle("90°").label("Overhead (90°)").imageUrl("https://images.unsplash.com/photo-1608231387042-66d1773070a5?auto=format&fit=crop&w=800&q=80").isPrimary(false).build(),
-                AiPhotoAngle.builder().angle("180°").label("Heel Counter (180°)").imageUrl("https://images.unsplash.com/photo-1607522370275-f14206abe5d3?auto=format&fit=crop&w=800&q=80").isPrimary(false).build(),
-                AiPhotoAngle.builder().angle("Podium").label("Floating Podium").imageUrl("https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=800&q=80").isPrimary(false).build(),
-                AiPhotoAngle.builder().angle("Macro").label("Sole & Stitch Detail").imageUrl("https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=800&q=80").isPrimary(false).build()
-            );
-        }
-
-        // 3. Electronics, Audio, Gadgets
-        if (combined.contains("earbud") || combined.contains("headphone") || combined.contains("watch") || 
-            combined.contains("electronic") || combined.contains("gadget") || combined.contains("phone")) {
-            return List.of(
-                AiPhotoAngle.builder().angle("0°").label("Front Display (0°)").imageUrl("https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80").isPrimary(true).build(),
-                AiPhotoAngle.builder().angle("45°").label("Isometric (45°)").imageUrl("https://images.unsplash.com/photo-1484704849700-f032a568e944?auto=format&fit=crop&w=800&q=80").isPrimary(false).build(),
-                AiPhotoAngle.builder().angle("90°").label("Side Profile (90°)").imageUrl("https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=800&q=80").isPrimary(false).build(),
-                AiPhotoAngle.builder().angle("180°").label("Back & Ports (180°)").imageUrl("https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=800&q=80").isPrimary(false).build(),
-                AiPhotoAngle.builder().angle("Podium").label("Showcase Pedestal").imageUrl("https://images.unsplash.com/photo-1524678606370-a47ad25cb82a?auto=format&fit=crop&w=800&q=80").isPrimary(false).build(),
-                AiPhotoAngle.builder().angle("Macro").label("Acoustic Mesh Detail").imageUrl("https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=800&q=80").isPrimary(false).build()
-            );
-        }
-
-        // 4. Default generic product angles
-        String base = (fallbackImg != null && !fallbackImg.isBlank()) ? fallbackImg : "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80";
         return List.of(
-            AiPhotoAngle.builder().angle("0°").label("Front Studio (0°)").imageUrl(base).isPrimary(true).build(),
+            AiPhotoAngle.builder().angle("0°").label("Front View (0°)").imageUrl(base).isPrimary(true).build(),
             AiPhotoAngle.builder().angle("45°").label("Quarter Angle (45°)").imageUrl(base).isPrimary(false).build(),
-            AiPhotoAngle.builder().angle("90°").label("Profile (90°)").imageUrl(base).isPrimary(false).build(),
-            AiPhotoAngle.builder().angle("180°").label("Back View (180°)").imageUrl(base).isPrimary(false).build(),
-            AiPhotoAngle.builder().angle("Podium").label("Showroom Podium").imageUrl(base).isPrimary(false).build()
+            AiPhotoAngle.builder().angle("90°").label("Side Profile (90°)").imageUrl(base).isPrimary(false).build(),
+            AiPhotoAngle.builder().angle("180°").label("Rear View (180°)").imageUrl(base).isPrimary(false).build(),
+            AiPhotoAngle.builder().angle("Podium").label("Showroom Podium").imageUrl(base).isPrimary(false).build(),
+            AiPhotoAngle.builder().angle("Macro").label("Fabric Detail").imageUrl(base).isPrimary(false).build()
         );
     }
 
@@ -674,46 +664,204 @@ public class AiCatalogGeneratorService {
     }
 
     /**
+     * Builds tailored commercial studio photography prompt for ANY product.
+     */
+    private String buildStudioPrompt(String command, String title, String category) {
+        String cleanTitle = (title != null && !title.isBlank()) ? title.trim() : "Retail product";
+        String cleanCat = (category != null && !category.isBlank()) ? category.trim() : "Apparel";
+        String cmd = (command != null) ? command.toLowerCase().trim() : "/360";
+
+        if (cmd.contains("podium") || cmd.contains("pedestal")) {
+            return "Ultra-realistic commercial product photography of " + cleanTitle + " (" + cleanCat + "), placed on an architectural round grey terrazzo marble podium platform, warm commercial showroom lighting, minimalist background, 8k resolution, award winning e-commerce catalog photoshoot";
+        } else if (cmd.contains("macro") || cmd.contains("detail") || cmd.contains("zoom")) {
+            return "Extreme high-definition optical macro studio photograph of " + cleanTitle + " (" + cleanCat + "), close-up showing intricate material texture, fine stitching, weave, and craftsmanship details, crisp depth of field, 8k resolution";
+        } else if (cmd.contains("studio") || cmd.contains("white") || cmd.contains("clean")) {
+            return "High-end commercial e-commerce studio catalog photography of " + cleanTitle + " (" + cleanCat + "), centered on a pure seamless infinite white background, professional 3-point softbox studio lighting, razor sharp, 8k";
+        } else if (cmd.contains("lifestyle") || cmd.contains("living") || cmd.contains("ambient")) {
+            return "Modern editorial aesthetic lifestyle photography of " + cleanTitle + " (" + cleanCat + ") in an upscale contemporary interior setting with soft natural daylight, shallow depth of field, boutique retail presentation";
+        } else if (cmd.contains("quarter") || cmd.contains("45")) {
+            return "Commercial studio e-commerce photograph of " + cleanTitle + " (" + cleanCat + "), turned at a 45 degree quarter angle view, pure white studio background, balanced studio lighting, 8k resolution";
+        } else if (cmd.contains("side") || cmd.contains("90")) {
+            return "Commercial studio e-commerce photograph of " + cleanTitle + " (" + cleanCat + "), 90 degree side profile view, seamless pure white background, crisp focus, 8k resolution";
+        } else if (cmd.contains("back") || cmd.contains("180") || cmd.contains("rear")) {
+            return "Commercial studio e-commerce photograph of " + cleanTitle + " (" + cleanCat + "), full 180 degree back rear view, clean studio lighting, 8k resolution";
+        } else {
+            // Default: /360 turnaround view
+            return "Commercial e-commerce studio photography of " + cleanTitle + " (" + cleanCat + "), front-facing view on a seamless clean white catalog background with subtle soft studio shadow, professional retail photography, 8k resolution";
+        }
+    }
+
+    /**
+     * Generates a studio image using Google's Imagen 3 model via Google AI Studio API.
+     */
+    private String generateImageWithGeminiImagen(String geminiKey, String prompt) {
+        try {
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("x-goog-api-key", geminiKey);
+
+            Map<String, Object> body = Map.of(
+                "instances", List.of(Map.of("prompt", prompt)),
+                "parameters", Map.of("sampleCount", 1, "aspectRatio", "1:1")
+            );
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                JsonNode predictions = root.path("predictions");
+                if (predictions.isArray() && predictions.size() > 0) {
+                    JsonNode first = predictions.get(0);
+                    String base64 = first.path("bytesBase64Encoded").asText();
+                    String mime = first.path("mimeType").asText("image/jpeg");
+                    if (base64 != null && !base64.isBlank()) {
+                        log.info("Successfully generated AI studio image using Google Imagen 3!");
+                        return "data:" + mime + ";base64," + base64;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Gemini Imagen 3 generation notice: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Generates a studio image using OpenAI DALL-E 3.
+     */
+    private String generateImageWithOpenAi(String token, String prompt) {
+        try {
+            String url = openAiApiUrl + "/images/generations";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(token);
+
+            Map<String, Object> body = Map.of(
+                "model", "dall-e-3",
+                "prompt", prompt,
+                "n", 1,
+                "size", "1024x1024"
+            );
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                JsonNode data = root.path("data");
+                if (data.isArray() && data.size() > 0) {
+                    String imgUrl = data.get(0).path("url").asText();
+                    if (imgUrl != null && !imgUrl.isBlank()) {
+                        log.info("Successfully generated AI studio image using OpenAI DALL-E 3!");
+                        return imgUrl;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("OpenAI image generation notice: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
      * AI Studio Photo Enhancer:
-     * Parses slash commands (/360, /studio, /podium, /lifestyle, /macro) and produces
-     * studio-grade lighting, framing, and turnaround angles.
+     * Parses slash commands (/360, /studio, /podium, /lifestyle, /macro) and generates
+     * studio-grade lighting, framing, and turnaround angles for ANY uploaded product.
      */
     public AiPhotoEnhanceResponse enhanceProductPhoto(Tenant tenant, AiPhotoEnhanceRequest request) {
         String cmd = (request.getCommand() != null && !request.getCommand().isBlank())
                 ? request.getCommand().trim().toLowerCase()
                 : "/360";
 
-        List<AiPhotoAngle> angles = resolveAnglesForProduct(
-                request.getProductTitle() != null ? request.getProductTitle() : "Men's Khaki Cargo Trousers",
-                request.getCategory() != null ? request.getCategory() : "Apparel",
-                request.getCurrentImageUrl() != null ? request.getCurrentImageUrl() : request.getBase64Image()
-        );
+        String title = request.getProductTitle() != null && !request.getProductTitle().isBlank()
+                ? request.getProductTitle().trim()
+                : "Product";
+        String category = request.getCategory() != null && !request.getCategory().isBlank()
+                ? request.getCategory().trim()
+                : "General";
+
+        // ALWAYS preserve the merchant's uploaded product image as the ground-truth base!
+        String userBaseImg = (request.getCurrentImageUrl() != null && !request.getCurrentImageUrl().isBlank())
+                ? request.getCurrentImageUrl()
+                : request.getBase64Image();
+
+        String geminiKey = chatGptOAuthService.getActiveGeminiApiKey(tenant);
+        String openAiToken = chatGptOAuthService.getActiveBearerToken(tenant);
+
+        // Generate tailored studio photo for this specific product
+        String prompt = buildStudioPrompt(cmd, title, category);
+        String generatedImgUrl = null;
+        String poweredByEngine = "AI Studio Engine";
+
+        if (geminiKey != null && !geminiKey.isBlank()) {
+            generatedImgUrl = generateImageWithGeminiImagen(geminiKey, prompt);
+            if (generatedImgUrl != null) {
+                poweredByEngine = "Google Imagen 3 (Gemini Studio)";
+            }
+        }
+        if (generatedImgUrl == null && openAiToken != null && !openAiToken.isBlank() && !openAiToken.startsWith("simulated_")) {
+            generatedImgUrl = generateImageWithOpenAi(openAiToken, prompt);
+            if (generatedImgUrl != null) {
+                poweredByEngine = "OpenAI DALL-E 3";
+            }
+        }
+
+        String primaryUrl = (generatedImgUrl != null) ? generatedImgUrl : userBaseImg;
+        if (primaryUrl == null || primaryUrl.isBlank()) {
+            primaryUrl = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80";
+        }
+
+        // Build the multi-angle turnaround set around the user's product
+        String baseImg = (userBaseImg != null && !userBaseImg.isBlank()) ? userBaseImg : primaryUrl;
+        List<AiPhotoAngle> angles = new ArrayList<>();
+
+        // Front 0° (enhanced if cmd is /studio or /360 and generated)
+        String frontImg = (cmd.contains("studio") || cmd.contains("white") || cmd.contains("clean")) && generatedImgUrl != null
+                ? generatedImgUrl : baseImg;
+        angles.add(AiPhotoAngle.builder().angle("0°").label("Front View (0°)").imageUrl(frontImg).isPrimary(true).build());
+
+        // Quarter 45°
+        String quarterImg = (cmd.contains("45") || cmd.contains("quarter")) && generatedImgUrl != null
+                ? generatedImgUrl : baseImg;
+        angles.add(AiPhotoAngle.builder().angle("45°").label("Quarter Angle (45°)").imageUrl(quarterImg).isPrimary(false).build());
+
+        // Side 90°
+        String sideImg = (cmd.contains("90") || cmd.contains("side")) && generatedImgUrl != null
+                ? generatedImgUrl : baseImg;
+        angles.add(AiPhotoAngle.builder().angle("90°").label("Side Profile (90°)").imageUrl(sideImg).isPrimary(false).build());
+
+        // Rear 180°
+        String rearImg = (cmd.contains("180") || cmd.contains("rear") || cmd.contains("back")) && generatedImgUrl != null
+                ? generatedImgUrl : baseImg;
+        angles.add(AiPhotoAngle.builder().angle("180°").label("Rear View (180°)").imageUrl(rearImg).isPrimary(false).build());
+
+        // Podium
+        String podiumImg = (cmd.contains("podium") || cmd.contains("pedestal")) && generatedImgUrl != null
+                ? generatedImgUrl : baseImg;
+        angles.add(AiPhotoAngle.builder().angle("Podium").label("Showroom Podium").imageUrl(podiumImg).isPrimary(cmd.contains("podium")).build());
+
+        // Macro
+        String macroImg = (cmd.contains("macro") || cmd.contains("detail") || cmd.contains("zoom")) && generatedImgUrl != null
+                ? generatedImgUrl : baseImg;
+        angles.add(AiPhotoAngle.builder().angle("Macro").label("Fabric Detail").imageUrl(macroImg).isPrimary(cmd.contains("macro")).build());
 
         String styleName;
         String desc;
-        String primaryUrl;
-
         if (cmd.contains("podium") || cmd.contains("pedestal")) {
             styleName = "Showroom Luxury Podium Display";
             desc = "Product styled on a high-end polished terrazzo showroom pedestal with ambient architectural studio lighting.";
-            primaryUrl = angles.stream().filter(a -> "Podium".equalsIgnoreCase(a.getAngle())).map(AiPhotoAngle::getImageUrl).findFirst().orElse(angles.get(0).getImageUrl());
         } else if (cmd.contains("macro") || cmd.contains("detail") || cmd.contains("zoom")) {
             styleName = "8K Ultra-Macro Craftsmanship Detail";
-            desc = "Extreme optical close-up highlighting fine fabric twill weave, reinforced stitching, and button finish.";
-            primaryUrl = angles.stream().filter(a -> "Macro".equalsIgnoreCase(a.getAngle())).map(AiPhotoAngle::getImageUrl).findFirst().orElse(angles.get(0).getImageUrl());
+            desc = "Extreme optical close-up highlighting fine fabric texture, material weave, and craftsmanship finish.";
         } else if (cmd.contains("studio") || cmd.contains("white") || cmd.contains("clean")) {
             styleName = "Pure White Commercial Catalog Studio";
             desc = "Seamless infinite white e-commerce photography with balanced 3-point softbox studio lighting.";
-            primaryUrl = angles.get(0).getImageUrl();
         } else if (cmd.contains("lifestyle") || cmd.contains("living") || cmd.contains("ambient")) {
             styleName = "Modern Editorial Lifestyle Context";
             desc = "Photographed in an upscale minimalist interior aesthetic setting with natural daylight.";
-            primaryUrl = angles.size() > 4 ? angles.get(4).getImageUrl() : angles.get(0).getImageUrl();
         } else {
-            // Default: /360 Multi-angle turnaround
             styleName = "360° Multi-Angle Turnaround Studio";
             desc = "Seamless 360-degree turnaround capture covering Front (0°), Quarter (45°), Profile (90°), Rear (180°), Podium, and Macro frames.";
-            primaryUrl = angles.get(0).getImageUrl();
         }
 
         List<String> suggested = List.of("/360", "/studio", "/podium", "/macro", "/lifestyle", "/floating");
@@ -725,7 +873,7 @@ public class AiCatalogGeneratorService {
                 .primaryImageUrl(primaryUrl)
                 .angles(angles)
                 .suggestedCommands(suggested)
-                .poweredBy("AI Studio Engine (360° Turnaround)")
+                .poweredBy(poweredByEngine)
                 .build();
     }
 }
