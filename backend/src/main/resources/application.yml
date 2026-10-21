@@ -71,6 +71,14 @@ app:
     webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:whsec_amazingdeal2026}
     currency: ${RAZORPAY_CURRENCY:INR}
     company-name: ${RAZORPAY_COMPANY_NAME:AmazingDeal}
+  openai:
+    chatgpt:
+      client-id: ${OPENAI_CHATGPT_CLIENT_ID:oaiapp_amazingdeal_dev}
+      client-secret: ${OPENAI_CHATGPT_CLIENT_SECRET:}
+      redirect-uri: ${OPENAI_CHATGPT_REDIRECT_URI:https://admin.amazingdeal.co.in/oauth/callback/chatgpt}
+      authorization-endpoint: ${OPENAI_AUTHORIZATION_ENDPOINT:https://auth.openai.com/api/accounts/authorize}
+      token-endpoint: ${OPENAI_TOKEN_ENDPOINT:https://auth.openai.com/api/accounts/oauth/token}
+    api-url: ${OPENAI_API_URL:https://api.openai.com/v1}
 
 
 management:

@@ -77,3 +77,34 @@ export interface AuthResponse {
   ownerPhone: string;
   upiVpa?: string;
 }
+
+export interface ChatGptStatus {
+  connected: boolean;
+  accountEmail?: string;
+  planTier?: string;
+  expiresAt?: string;
+  hasCustomApiKey: boolean;
+  maskedApiKey?: string;
+  connectionType: 'CHATGPT_SUBSCRIPTION' | 'CUSTOM_API_KEY' | 'DISCONNECTED';
+}
+
+export interface ChatGptAuthUrlResponse {
+  authorizationUrl: string;
+  state: string;
+  codeVerifier: string;
+}
+
+export interface GeneratedProduct {
+  title: string;
+  description: string;
+  category: string;
+  suggestedPrice: number;
+  comparePrice?: number;
+  tags?: string[];
+  keyHighlights?: string[];
+  ingredientsOrSpecs?: string;
+  estimatedUnit?: string;
+  imageUrl?: string;
+  inventoryQuantity: number;
+  poweredBy?: string;
+}

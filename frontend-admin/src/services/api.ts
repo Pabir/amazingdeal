@@ -1,4 +1,4 @@
-import { AuthResponse, Order, OrderStats, Product, Tenant } from '../types';
+import { AuthResponse, Order, OrderStats, Product, Tenant, ChatGptStatus, ChatGptAuthUrlResponse, GeneratedProduct } from '../types';
 
 const getApiBase = (): string => {
   if (typeof window !== 'undefined') {
@@ -190,5 +190,47 @@ export class ApiService {
         body: JSON.stringify({ fileName, contentType }),
       }
     );
+  }
+
+  // AI & ChatGPT Plan Integration
+  public static async getChatGptAuthUrl(): Promise<ChatGptAuthUrlResponse> {
+    return this.request<ChatGptAuthUrlResponse>('/api/v1/admin/ai/chatgpt/auth-url');
+  }
+
+  public static async handleChatGptCallback(data: { code: string; codeVerifier?: string; state?: string }): Promise<ChatGptStatus> {
+    return this.request<ChatGptStatus>('/api/v1/admin/ai/chatgpt/callback', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  public static async getChatGptStatus(): Promise<ChatGptStatus> {
+    return this.request<ChatGptStatus>('/api/v1/admin/ai/chatgpt/status');
+  }
+
+  public static async disconnectChatGpt(): Promise<ChatGptStatus> {
+    return this.request<ChatGptStatus>('/api/v1/admin/ai/chatgpt/disconnect', {
+      method: 'POST',
+    });
+  }
+
+  public static async saveCustomApiKey(apiKey: string): Promise<ChatGptStatus> {
+    return this.request<ChatGptStatus>('/api/v1/admin/ai/chatgpt/custom-api-key', {
+      method: 'POST',
+      body: JSON.stringify({ apiKey }),
+    });
+  }
+
+  public static async generateProductFromImage(data: {
+    imageUrl?: string;
+    base64Image?: string;
+    preferredCategory?: string;
+    additionalMerchantNotes?: string;
+    simulateDemo?: boolean;
+  }): Promise<GeneratedProduct> {
+    return this.request<GeneratedProduct>('/api/v1/admin/ai/generate-product', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 }

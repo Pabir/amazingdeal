@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Product } from '../types';
 import { Plus, Search, Check, AlertCircle, Trash2, Edit3, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { ApiService } from '../services/api';
+import { AiProductScannerModal } from './AiProductScannerModal';
 
 interface ProductCatalogProps {
   products: Product[];
@@ -12,6 +13,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ products, onRefr
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Form State
@@ -105,13 +107,23 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ products, onRefr
           />
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center justify-center space-x-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-500/20 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Product</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowAiModal(true)}
+            className="inline-flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 hover:from-slate-800 hover:to-slate-800 text-white border border-emerald-500/30 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/10 transition-all group"
+          >
+            <Sparkles className="w-4 h-4 text-emerald-400 group-hover:rotate-12 transition-transform" />
+            <span>AI Magic Scan (Photo)</span>
+          </button>
+
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center justify-center space-x-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-500/20 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Product</span>
+          </button>
+        </div>
       </div>
 
       {/* Category Pills */}
@@ -367,6 +379,14 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ products, onRefr
           </div>
         </div>
       )}
+
+      {/* AI Product Scanner Modal (Powered by ChatGPT Vision) */}
+      <AiProductScannerModal
+        isOpen={showAiModal}
+        onClose={() => setShowAiModal(false)}
+        onProductCreated={onRefresh}
+        categories={categories}
+      />
 
     </div>
   );

@@ -92,6 +92,28 @@ public class Tenant {
     @Column(name = "subscription_payment_ref", length = 100)
     private String subscriptionPaymentRef;
 
+    @Builder.Default
+    @Column(name = "chatgpt_connected")
+    private Boolean chatgptConnected = false;
+
+    @Column(name = "chatgpt_account_email", length = 150)
+    private String chatgptAccountEmail;
+
+    @Column(name = "chatgpt_plan_tier", length = 50)
+    private String chatgptPlanTier; // e.g. PLUS, PRO, TEAM, ENTERPRISE
+
+    @Column(name = "chatgpt_access_token", columnDefinition = "TEXT")
+    private String chatgptAccessToken;
+
+    @Column(name = "chatgpt_refresh_token", columnDefinition = "TEXT")
+    private String chatgptRefreshToken;
+
+    @Column(name = "chatgpt_token_expires_at")
+    private Instant chatgptTokenExpiresAt;
+
+    @Column(name = "custom_openai_api_key", length = 200)
+    private String customOpenaiApiKey;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;

@@ -203,6 +203,29 @@ export function App() {
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
+  // Handle ChatGPT OAuth redirect callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+
+    if (code && isAuthenticated) {
+      const codeVerifier = localStorage.getItem('chatgpt_code_verifier') || undefined;
+      ApiService.handleChatGptCallback({ code, codeVerifier, state: state || undefined })
+        .then((status) => {
+          localStorage.removeItem('chatgpt_code_verifier');
+          localStorage.removeItem('chatgpt_auth_state');
+          window.history.replaceState({}, document.title, window.location.pathname);
+          alert(`ChatGPT Plan connected successfully! (${status.planTier || 'ChatGPT Plus'})`);
+          setActiveTab('settings');
+        })
+        .catch((err) => {
+          console.error('ChatGPT callback error:', err);
+          alert('Failed to complete ChatGPT sign-in: ' + err.message);
+        });
+    }
+  }, [isAuthenticated]);
+
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     try {
       await ApiService.updateOrderStatus(orderId, newStatus);
