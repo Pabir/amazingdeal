@@ -14,4 +14,5 @@ public interface TenantRepository extends JpaRepository<Tenant, UUID> {
     Optional<Tenant> findByOwnerEmailIgnoreCase(String ownerEmail);
     boolean existsBySubdomainIgnoreCase(String subdomain);
     boolean existsByOwnerEmailIgnoreCase(String ownerEmail);
+    boolean existsBySubscriptionPaymentRef(String subscriptionPaymentRef);
 }

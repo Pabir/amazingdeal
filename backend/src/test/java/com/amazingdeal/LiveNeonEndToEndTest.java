@@ -56,6 +56,8 @@ class LiveNeonEndToEndTest {
         registerReq.setStoreCategory("Groceries & Sweets");
         registerReq.setStoreAddress("Shop 10, Main Market, Delhi");
         registerReq.setUpiVpa(subdomain + "@okaxis");
+        registerReq.setSubscriptionPlan("MONTHLY");
+        registerReq.setSubscriptionPaymentRef("pay_test_" + uniqueSuffix);
 
         AuthResponse auth = tenantService.registerStore(registerReq);
         assertNotNull(auth);

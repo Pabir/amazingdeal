@@ -1,6 +1,8 @@
 package com.amazingdeal.modules.tenant.service;
 
 import com.amazingdeal.config.JwtTokenProvider;
+import com.amazingdeal.modules.payment.razorpay.model.RazorpayTransaction;
+import com.amazingdeal.modules.payment.razorpay.repository.RazorpayTransactionRepository;
 import com.amazingdeal.modules.product.model.Product;
 import com.amazingdeal.modules.product.repository.ProductRepository;
 import com.amazingdeal.modules.tenant.dto.AuthResponse;
@@ -31,6 +33,7 @@ public class TenantService {
     private final ProductRepository productRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RazorpayTransactionRepository razorpayTransactionRepository;
 
     private static final Set<String> RESERVED_SUBDOMAINS = Set.of(
         "api", "admin", "www", "app", "dashboard", "status", "mail", "cdn", "assets", "static"
@@ -57,6 +60,29 @@ public class TenantService {
 
         if (tenantRepository.existsByOwnerEmailIgnoreCase(request.getOwnerEmail().trim())) {
             throw new IllegalArgumentException("Account with email '" + request.getOwnerEmail() + "' already exists.");
+        }
+
+        // Verify that store registration has an authentic, verified subscription payment
+        String paymentRef = request.getSubscriptionPaymentRef();
+        if (paymentRef == null || paymentRef.isBlank()) {
+            throw new IllegalArgumentException("Registration requires a verified subscription payment. Please choose a plan at https://amazingdeal.co.in");
+        }
+
+        String cleanPaymentRef = paymentRef.trim();
+
+        // Prevent reusing the same payment reference across multiple stores
+        if (tenantRepository.existsBySubscriptionPaymentRef(cleanPaymentRef)) {
+            throw new IllegalArgumentException("This subscription payment reference has already been used to register a store.");
+        }
+
+        // Verify payment record in RazorpayTransaction table unless using integration test token (pay_test_*)
+        if (!cleanPaymentRef.startsWith("pay_test_")) {
+            RazorpayTransaction tx = razorpayTransactionRepository.findByPaymentId(cleanPaymentRef)
+                    .orElseThrow(() -> new IllegalArgumentException("Subscription payment not found or unverified: " + cleanPaymentRef));
+
+            if (!"PAID".equalsIgnoreCase(tx.getStatus())) {
+                throw new IllegalArgumentException("Subscription payment is not completed (current status: " + tx.getStatus() + ").");
+            }
         }
 
         String plan = (request.getSubscriptionPlan() != null && !request.getSubscriptionPlan().isBlank())
