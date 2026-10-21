@@ -98,6 +98,32 @@ public class AiCatalogController {
     }
 
     /**
+     * Saves merchant's OpenAI API Key explicitly.
+     */
+    @PostMapping("/openai/custom-api-key")
+    public ResponseEntity<ChatGptStatusResponse> saveOpenAiApiKey(@Valid @RequestBody CustomApiKeyRequest request) {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        ChatGptStatusResponse status = chatGptOAuthService.saveCustomApiKey(tenantId, request.getApiKey().trim());
+        return ResponseEntity.ok(status);
+    }
+
+    /**
+     * Disconnects OpenAI API Key.
+     */
+    @PostMapping("/openai/disconnect")
+    public ResponseEntity<ChatGptStatusResponse> disconnectOpenAi() {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        ChatGptStatusResponse status = chatGptOAuthService.disconnect(tenantId);
+        return ResponseEntity.ok(status);
+    }
+
+    /**
      * Saves merchant's Google Gemini API Key.
      */
     @PostMapping("/gemini/custom-api-key")

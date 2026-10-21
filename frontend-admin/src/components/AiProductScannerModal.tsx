@@ -28,14 +28,17 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
 
   // AI Pipeline State
   const [analyzing, setAnalyzing] = useState(false);
+  const [activeEngine, setActiveEngine] = useState<'GEMINI' | 'OPENAI' | 'DEMO' | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<GeneratedProduct | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Manual API Key / Config Modal
+  // Separate API Key Inputs for Gemini and OpenAI
   const [showKeyInput, setShowKeyInput] = useState(false);
-  const [customKey, setCustomKey] = useState('');
-  const [savingKey, setSavingKey] = useState(false);
+  const [geminiKeyInput, setGeminiKeyInput] = useState('');
+  const [openaiKeyInput, setOpenaiKeyInput] = useState('');
+  const [savingGemini, setSavingGemini] = useState(false);
+  const [savingOpenAi, setSavingOpenAi] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -50,7 +53,7 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
       const res = await ApiService.getChatGptStatus();
       setChatGptStatus(res);
     } catch (e: any) {
-      console.warn('Could not load ChatGPT status:', e);
+      console.warn('Could not load AI status:', e);
     } finally {
       setLoadingStatus(false);
     }
@@ -60,12 +63,10 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
     try {
       setError(null);
       const auth = await ApiService.getChatGptAuthUrl();
-      // Store codeVerifier for PKCE exchange on callback
       if (auth.codeVerifier) {
         localStorage.setItem('chatgpt_code_verifier', auth.codeVerifier);
         localStorage.setItem('chatgpt_auth_state', auth.state);
       }
-      // Redirect to OpenAI OAuth consent screen
       window.location.href = auth.authorizationUrl;
     } catch (e: any) {
       setError('Failed to initiate ChatGPT OAuth: ' + (e.message || 'Check server configuration'));
@@ -87,37 +88,77 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
     }
   };
 
-  const handleSaveCustomKey = async () => {
-    const key = customKey.trim();
+  const handleSaveGeminiKey = async () => {
+    const key = geminiKeyInput.trim();
     if (!key) {
-      setError('Please enter your Google Gemini (AQ... or AIza...) or OpenAI (sk-...) API key.');
+      setError('Please enter your Google Gemini API key (starts with AQ. or AIza...).');
+      return;
+    }
+    if (key.startsWith('sk-')) {
+      setError('That appears to be an OpenAI API key (sk-...). Please enter it into the OpenAI field instead.');
       return;
     }
 
     try {
-      setSavingKey(true);
+      setSavingGemini(true);
       setError(null);
-      let updated: ChatGptStatus;
-
-      if (key.startsWith('sk-')) {
-        // OpenAI Key
-        updated = await ApiService.saveCustomApiKey(key);
-      } else if (key.startsWith('AIza') || key.startsWith('AQ.') || key.length >= 20) {
-        // Google Gemini Key (supports both legacy AIza... and new Google AI Studio AQ.... authorization keys)
-        updated = await ApiService.saveCustomGeminiApiKey(key);
-      } else {
-        setError('Unrecognized key prefix. Google Gemini keys start with "AQ." or "AIza...", and OpenAI keys start with "sk-..."');
-        setSavingKey(false);
-        return;
-      }
-
+      const updated = await ApiService.saveCustomGeminiApiKey(key);
       setChatGptStatus(updated);
-      setShowKeyInput(false);
-      setCustomKey('');
+      setGeminiKeyInput('');
     } catch (e: any) {
-      setError('Failed to save API key: ' + e.message);
+      setError('Failed to save Google Gemini key: ' + e.message);
     } finally {
-      setSavingKey(false);
+      setSavingGemini(false);
+    }
+  };
+
+  const handleSaveOpenAiKey = async () => {
+    const key = openaiKeyInput.trim();
+    if (!key) {
+      setError('Please enter your OpenAI API key (starts with sk-...).');
+      return;
+    }
+    if (key.startsWith('AQ.') || key.startsWith('AIza')) {
+      setError('That appears to be a Google Gemini key. Please enter it into the Gemini field above.');
+      return;
+    }
+
+    try {
+      setSavingOpenAi(true);
+      setError(null);
+      const updated = await ApiService.saveCustomOpenAiApiKey(key);
+      setChatGptStatus(updated);
+      setOpenaiKeyInput('');
+    } catch (e: any) {
+      setError('Failed to save OpenAI key: ' + e.message);
+    } finally {
+      setSavingOpenAi(false);
+    }
+  };
+
+  const handleDisconnectGemini = async () => {
+    try {
+      setLoadingStatus(true);
+      setError(null);
+      const updated = await ApiService.disconnectGemini();
+      setChatGptStatus(updated);
+    } catch (e: any) {
+      setError('Failed to disconnect Gemini: ' + e.message);
+    } finally {
+      setLoadingStatus(false);
+    }
+  };
+
+  const handleDisconnectOpenAi = async () => {
+    try {
+      setLoadingStatus(true);
+      setError(null);
+      const updated = await ApiService.disconnectOpenAi();
+      setChatGptStatus(updated);
+    } catch (e: any) {
+      setError('Failed to disconnect OpenAI: ' + e.message);
+    } finally {
+      setLoadingStatus(false);
     }
   };
 
@@ -175,14 +216,27 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
     setBase64Image('');
   };
 
-  const handleAnalyzePhoto = async (forceSimulate = false) => {
+  const handleAnalyzePhoto = async (engine: 'GEMINI' | 'OPENAI' | 'DEMO') => {
     if (!imagePreview && !imageUrl && !base64Image) {
       setError('Please select or upload a product photo first.');
       return;
     }
 
+    if (engine === 'GEMINI' && !chatGptStatus?.hasCustomGeminiKey) {
+      setShowKeyInput(true);
+      setError('Please enter your free Google Gemini API key below to generate with Gemini.');
+      return;
+    }
+
+    if (engine === 'OPENAI' && !chatGptStatus?.hasCustomApiKey && !chatGptStatus?.connected) {
+      setShowKeyInput(true);
+      setError('Please enter your OpenAI API key below to generate with OpenAI.');
+      return;
+    }
+
     try {
       setAnalyzing(true);
+      setActiveEngine(engine);
       setError(null);
 
       const res = await ApiService.generateProductFromImage({
@@ -190,7 +244,8 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
         base64Image: base64Image || undefined,
         preferredCategory: preferredCategory || undefined,
         additionalMerchantNotes: notes || undefined,
-        simulateDemo: forceSimulate || (!chatGptStatus?.connected && !chatGptStatus?.hasCustomApiKey && !chatGptStatus?.hasCustomGeminiKey),
+        simulateDemo: engine === 'DEMO',
+        provider: engine === 'DEMO' ? undefined : engine,
       });
 
       setGeneratedDraft(res);
@@ -198,6 +253,7 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
       setError(e.message || 'Failed to analyze product photo. Please try again.');
     } finally {
       setAnalyzing(false);
+      setActiveEngine(null);
     }
   };
 
@@ -274,154 +330,223 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
 
         {/* AI Key / Provider Ribbon */}
         <div className="bg-slate-50 border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
-          {chatGptStatus?.hasCustomGeminiKey ? (
-            <div className="flex items-center space-x-2 text-blue-900 font-semibold">
-              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              <span>
-                Google Gemini Active: <strong className="font-mono text-blue-950">{chatGptStatus.maskedGeminiKey}</strong>
-              </span>
-              <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold">
-                Free Tier / Jio 5G
-              </span>
-              {chatGptStatus.hasCustomApiKey && (
-                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                  + OpenAI Backup
-                </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Google Gemini Badge */}
+            <div className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
+              chatGptStatus?.hasCustomGeminiKey 
+                ? 'bg-blue-50/80 border-blue-200 text-blue-900' 
+                : 'bg-slate-100 border-slate-200 text-slate-500'
+            }`}>
+              <Sparkles className={`w-3.5 h-3.5 ${chatGptStatus?.hasCustomGeminiKey ? 'text-blue-600' : 'text-slate-400'}`} />
+              <span>Gemini:</span>
+              {chatGptStatus?.hasCustomGeminiKey ? (
+                <>
+                  <strong className="font-mono text-blue-950 font-bold">{chatGptStatus.maskedGeminiKey}</strong>
+                  <span className="text-[10px] bg-blue-200/70 text-blue-800 px-1.5 py-0.2 rounded font-bold">Free</span>
+                </>
+              ) : (
+                <span className="text-slate-400">Not set</span>
               )}
             </div>
-          ) : chatGptStatus?.hasCustomApiKey ? (
-            <div className="flex items-center space-x-2 text-emerald-800 font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <Key className="w-3.5 h-3.5 text-emerald-600" />
-              <span>
-                Personal OpenAI Key Active: <strong className="font-mono text-emerald-950">{chatGptStatus.maskedApiKey}</strong>
-              </span>
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                GPT-4o Vision
-              </span>
+
+            {/* OpenAI Badge */}
+            <div className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
+              chatGptStatus?.hasCustomApiKey 
+                ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900' 
+                : 'bg-slate-100 border-slate-200 text-slate-500'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${chatGptStatus?.hasCustomApiKey ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+              <span>OpenAI:</span>
+              {chatGptStatus?.hasCustomApiKey ? (
+                <>
+                  <strong className="font-mono text-emerald-950 font-bold">{chatGptStatus.maskedApiKey}</strong>
+                  <span className="text-[10px] bg-emerald-200/70 text-emerald-800 px-1.5 py-0.2 rounded font-bold">Active</span>
+                </>
+              ) : (
+                <span className="text-slate-400">Not set</span>
+              )}
             </div>
-          ) : chatGptStatus?.connected ? (
-            <div className="flex items-center space-x-2 text-emerald-800 font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>
-                Demo Mode Active: <strong className="text-emerald-950">{chatGptStatus.planTier}</strong>
-              </span>
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                Simulation Test
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-2 text-slate-600">
-              <Key className="w-3.5 h-3.5 text-amber-500" />
-              <span>Provide your Google Gemini (Free / Jio 5G) or OpenAI key, or run instant demo.</span>
-            </div>
-          )}
+          </div>
 
           <div className="flex items-center space-x-2">
-            {!chatGptStatus?.hasCustomApiKey && !chatGptStatus?.hasCustomGeminiKey && !chatGptStatus?.connected && (
-              <button
-                type="button"
-                onClick={handleSimulateConnect}
-                className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-lg font-bold text-[11px] transition-all flex items-center space-x-1"
-                title="Test with instant demo without entering an API key"
-              >
-                <span>⚡ Instant Demo</span>
-              </button>
-            )}
-
             <button
               onClick={() => setShowKeyInput(!showKeyInput)}
               className="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-bold text-[11px] transition-all flex items-center space-x-1"
             >
               <Key className="w-3 h-3" />
-              <span>{showKeyInput ? 'Close' : (chatGptStatus?.hasCustomGeminiKey || chatGptStatus?.hasCustomApiKey ? 'Change AI Key' : 'Enter AI Key')}</span>
+              <span>{showKeyInput ? 'Hide Keys' : 'Manage AI Keys'}</span>
             </button>
           </div>
         </div>
 
-        {/* API Key Drawer */}
+        {/* Dual API Key Drawer */}
         {showKeyInput && (
-          <div className="bg-amber-50/90 border-b border-amber-200 px-6 py-3 space-y-2 text-xs">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center space-x-2 font-bold text-amber-900">
-                <Key className="w-3.5 h-3.5" />
-                <span>AI Vision API Key:</span>
-                {(customKey.trim().startsWith('AIza') || customKey.trim().startsWith('AQ.') || (!customKey.trim().startsWith('sk-') && customKey.trim().length >= 20)) && (
-                  <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold">
-                    Detected: Google Gemini
-                  </span>
-                )}
-                {customKey.trim().startsWith('sk-') && (
-                  <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                    Detected: OpenAI
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center space-x-3 text-[11px]">
-                <a
-                  href="https://aistudio.google.com/app/apikey"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-700 hover:text-blue-900 font-bold underline flex items-center space-x-1"
-                >
-                  <span>✨ Get Free Gemini Key (Google AI Studio) ↗</span>
-                </a>
-                <span className="text-slate-300">|</span>
-                <a
-                  href="https://platform.openai.com/api-keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-amber-800 hover:text-amber-950 font-semibold underline flex items-center space-x-1"
-                >
-                  <span>OpenAI Keys ↗</span>
-                </a>
-              </div>
+          <div className="bg-slate-100/90 border-b border-slate-200 px-6 py-4 space-y-3 text-xs animate-fadeIn">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-bold text-slate-700 uppercase tracking-wider text-[11px]">Save & Manage Your AI API Keys</span>
+              <span className="text-[11px] text-slate-500">Both keys are safely stored with AES-256 GCM encryption.</span>
             </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="password"
-                placeholder="Paste Gemini (AQ... or AIza...) or OpenAI (sk-...) key here"
-                value={customKey}
-                onChange={(e) => setCustomKey(e.target.value)}
-                className="flex-1 min-w-[200px] px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-amber-500"
-              />
-              <button
-                disabled={savingKey || !customKey}
-                onClick={handleSaveCustomKey}
-                className="px-3.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg font-bold text-xs disabled:opacity-40 transition-all shrink-0"
-              >
-                {savingKey ? 'Saving...' : 'Save & Activate'}
-              </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              
+              {/* Google Gemini Card */}
+              <div className="bg-white p-3.5 rounded-2xl border border-blue-200 shadow-sm space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5 font-bold text-blue-950">
+                    <Sparkles className="w-4 h-4 text-blue-600" />
+                    <span>Google Gemini (Free Tier / Jio 5G)</span>
+                  </div>
+                  {chatGptStatus?.hasCustomGeminiKey && (
+                    <button
+                      type="button"
+                      onClick={handleDisconnectGemini}
+                      className="text-red-600 hover:text-red-800 text-[11px] font-semibold underline"
+                    >
+                      Disconnect
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500">Current Status:</span>
+                  {chatGptStatus?.hasCustomGeminiKey ? (
+                    <span className="inline-flex items-center space-x-1 font-mono font-bold text-blue-900 bg-blue-50 px-2 py-0.5 rounded">
+                      <CheckCircle2 className="w-3 h-3 text-blue-600" />
+                      <span>{chatGptStatus.maskedGeminiKey}</span>
+                    </span>
+                  ) : (
+                    <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-semibold">Not Configured</span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    placeholder="Enter Gemini key (AQ... or AIza...)"
+                    value={geminiKeyInput}
+                    onChange={(e) => setGeminiKeyInput(e.target.value)}
+                    className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button
+                    disabled={savingGemini || !geminiKeyInput}
+                    onClick={handleSaveGeminiKey}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs disabled:opacity-40 transition-all shrink-0"
+                  >
+                    {savingGemini ? 'Saving...' : 'Save Gemini'}
+                  </button>
+                </div>
+
+                <div className="pt-1 flex items-center justify-between text-[11px]">
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-700 hover:text-blue-900 font-bold underline flex items-center space-x-1"
+                  >
+                    <span>✨ Get Free Gemini Key (Google AI Studio) ↗</span>
+                  </a>
+                  <span className="text-[10px] text-slate-400">100% Free / No Card</span>
+                </div>
+              </div>
+
+              {/* OpenAI Card */}
+              <div className="bg-white p-3.5 rounded-2xl border border-emerald-200 shadow-sm space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5 font-bold text-emerald-950">
+                    <Key className="w-4 h-4 text-emerald-600" />
+                    <span>OpenAI (GPT-4o Vision)</span>
+                  </div>
+                  {(chatGptStatus?.hasCustomApiKey || chatGptStatus?.connected) && (
+                    <button
+                      type="button"
+                      onClick={handleDisconnectOpenAi}
+                      className="text-red-600 hover:text-red-800 text-[11px] font-semibold underline"
+                    >
+                      Disconnect
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500">Current Status:</span>
+                  {chatGptStatus?.hasCustomApiKey ? (
+                    <span className="inline-flex items-center space-x-1 font-mono font-bold text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      <span>{chatGptStatus.maskedApiKey}</span>
+                    </span>
+                  ) : (
+                    <span className="text-slate-500 bg-slate-50 px-2 py-0.5 rounded font-semibold">Not Configured</span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    placeholder="Enter OpenAI key (sk-...)"
+                    value={openaiKeyInput}
+                    onChange={(e) => setOpenaiKeyInput(e.target.value)}
+                    className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                  <button
+                    disabled={savingOpenAi || !openaiKeyInput}
+                    onClick={handleSaveOpenAiKey}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs disabled:opacity-40 transition-all shrink-0"
+                  >
+                    {savingOpenAi ? 'Saving...' : 'Save OpenAI'}
+                  </button>
+                </div>
+
+                <div className="pt-1 flex items-center justify-between text-[11px]">
+                  <a
+                    href="https://platform.openai.com/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-700 hover:text-emerald-900 font-bold underline flex items-center space-x-1"
+                  >
+                    <span>OpenAI Platform Keys ↗</span>
+                  </a>
+                  <span className="text-[10px] text-slate-400">Requires OpenAI Credits</span>
+                </div>
+              </div>
+
             </div>
-            <p className="text-[11px] text-slate-500">
-              💡 <strong>Pro-Tip:</strong> Google AI Studio keys start with "AQ." or "AIza...". Jio 5G users and all Google account holders can generate a 100% free key with no credit card required.
-            </p>
           </div>
         )}
 
-        {/* Error Alert */}
+        {/* Error Alert with Smart Quick Retries */}
         {error && (
-          <div className="mx-6 mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex flex-wrap items-center justify-between gap-2">
+          <div className="mx-6 mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex flex-wrap items-center justify-between gap-2 animate-fadeIn">
             <div className="flex items-center space-x-2 flex-1">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
               <span>{error}</span>
             </div>
-            <div className="flex items-center space-x-2">
-              {(error.toLowerCase().includes('credit') || 
-                error.toLowerCase().includes('balance') || 
-                error.toLowerCase().includes('quota') || 
-                error.toLowerCase().includes('openai') || 
-                error.toLowerCase().includes('gemini')) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {chatGptStatus?.hasCustomGeminiKey && error.toLowerCase().includes('openai') && (
                 <button
                   type="button"
-                  onClick={() => handleAnalyzePhoto(true)}
-                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold shadow-sm transition-colors"
+                  onClick={() => handleAnalyzePhoto('GEMINI')}
+                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold shadow-sm transition-colors flex items-center space-x-1"
                 >
-                  ⚡ Run with Instant Demo Mode
+                  <Sparkles className="w-3 h-3" />
+                  <span>Try with Gemini (Free)</span>
                 </button>
               )}
+              {chatGptStatus?.hasCustomApiKey && (error.toLowerCase().includes('gemini') || error.toLowerCase().includes('503')) && (
+                <button
+                  type="button"
+                  onClick={() => handleAnalyzePhoto('OPENAI')}
+                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold shadow-sm transition-colors"
+                >
+                  🟢 Try with OpenAI
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => handleAnalyzePhoto('DEMO')}
+                className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold shadow-sm transition-colors"
+              >
+                ⚡ Run with Demo Mode
+              </button>
               <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700 p-1">
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -461,14 +586,24 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
                     </button>
                     {analyzing && (
                       <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm flex flex-col items-center justify-center text-white space-y-3 p-4 text-center">
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center animate-bounce shadow-xl shadow-emerald-500/50">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center animate-bounce shadow-xl ${
+                          activeEngine === 'GEMINI' 
+                            ? 'bg-blue-500 shadow-blue-500/50' 
+                            : activeEngine === 'OPENAI' 
+                            ? 'bg-emerald-500 shadow-emerald-500/50' 
+                            : 'bg-amber-500 shadow-amber-500/50'
+                        }`}>
                           <Sparkles className="w-6 h-6 text-slate-950" />
                         </div>
                         <div>
-                          <p className="font-extrabold text-sm text-emerald-300">
-                            {chatGptStatus?.hasCustomGeminiKey ? 'Gemini 1.5 Flash is analyzing your item...' : 'AI Vision is analyzing your item...'}
+                          <p className="font-extrabold text-sm text-white">
+                            {activeEngine === 'GEMINI'
+                              ? 'Google Gemini is analyzing your product...'
+                              : activeEngine === 'OPENAI'
+                              ? 'OpenAI GPT-4o Vision is analyzing your product...'
+                              : 'Instant Demo Scan is generating your listing...'}
                           </p>
-                          <p className="text-xs text-slate-300 mt-1">Extracting product title, pack size, specs, and pricing</p>
+                          <p className="text-xs text-slate-300 mt-1">Extracting product title, packaging specs, and realistic pricing</p>
                         </div>
                       </div>
                     )}
@@ -557,55 +692,71 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100">
+              {/* Action Buttons: Explicit Options for Gemini, OpenAI, and Instant Demo */}
+              <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100">
                 <div className="text-[11px] text-slate-500 flex items-center space-x-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>
-                    {chatGptStatus?.hasCustomGeminiKey
-                      ? 'Powered by Google Gemini 1.5 Flash (Free Tier / Jio 5G)'
-                      : chatGptStatus?.hasCustomApiKey
-                      ? 'Powered by your personal OpenAI API Key'
-                      : isConnected
-                      ? 'Connected to AI Engine'
-                      : 'Free Demo Mode or connect Gemini / OpenAI Key'}
-                  </span>
+                  <span>Choose your AI engine to scan:</span>
                 </div>
 
-                <div className="flex items-center space-x-2 w-full sm:w-auto">
-                  {!isConnected && (
-                    <button
-                      type="button"
-                      disabled={analyzing}
-                      onClick={() => handleAnalyzePhoto(true)}
-                      className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all"
-                    >
-                      Instant Demo Scan
-                    </button>
-                  )}
-
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  {/* Button 1: Google Gemini (Free Tier) */}
                   <button
                     type="button"
                     disabled={analyzing || !imagePreview}
-                    onClick={() => handleAnalyzePhoto(false)}
-                    className="flex-1 sm:flex-none px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
+                    onClick={() => handleAnalyzePhoto('GEMINI')}
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                    title={chatGptStatus?.hasCustomGeminiKey ? 'Generate with Google Gemini (Free Tier)' : 'Click to add free Gemini key'}
                   >
-                    {analyzing ? (
+                    {analyzing && activeEngine === 'GEMINI' ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Analyzing product photo...</span>
+                        <span>Gemini scanning...</span>
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-4 h-4 text-emerald-200" />
-                        <span>
-                          {chatGptStatus?.hasCustomGeminiKey
-                            ? 'Generate with Gemini Flash'
-                            : chatGptStatus?.hasCustomApiKey
-                            ? 'Generate with GPT-4o Vision'
-                            : 'Generate with AI Vision'}
-                        </span>
+                        <Sparkles className="w-4 h-4 text-blue-200" />
+                        <span>Generate with Gemini (Free)</span>
                       </>
+                    )}
+                  </button>
+
+                  {/* Button 2: OpenAI (GPT-4o Vision) */}
+                  <button
+                    type="button"
+                    disabled={analyzing || !imagePreview}
+                    onClick={() => handleAnalyzePhoto('OPENAI')}
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                    title={chatGptStatus?.hasCustomApiKey ? 'Generate with OpenAI GPT-4o' : 'Click to add OpenAI key'}
+                  >
+                    {analyzing && activeEngine === 'OPENAI' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>OpenAI scanning...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-emerald-300" />
+                        <span>Generate with OpenAI</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Button 3: Instant Demo Mode */}
+                  <button
+                    type="button"
+                    disabled={analyzing || !imagePreview}
+                    onClick={() => handleAnalyzePhoto('DEMO')}
+                    className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center space-x-1"
+                    title="Simulate scan instantly without consuming API credits"
+                  >
+                    {analyzing && activeEngine === 'DEMO' ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Demo...</span>
+                      </>
+                    ) : (
+                      <span>⚡ Instant Demo</span>
                     )}
                   </button>
                 </div>

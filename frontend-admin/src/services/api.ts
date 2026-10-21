@@ -225,6 +225,19 @@ export class ApiService {
     });
   }
 
+  public static async saveCustomOpenAiApiKey(apiKey: string): Promise<ChatGptStatus> {
+    return this.request<ChatGptStatus>('/api/v1/admin/ai/openai/custom-api-key', {
+      method: 'POST',
+      body: JSON.stringify({ apiKey }),
+    });
+  }
+
+  public static async disconnectOpenAi(): Promise<ChatGptStatus> {
+    return this.request<ChatGptStatus>('/api/v1/admin/ai/openai/disconnect', {
+      method: 'POST',
+    });
+  }
+
   public static async saveCustomGeminiApiKey(apiKey: string): Promise<ChatGptStatus> {
     return this.request<ChatGptStatus>('/api/v1/admin/ai/gemini/custom-api-key', {
       method: 'POST',
@@ -251,6 +264,7 @@ export class ApiService {
     preferredCategory?: string;
     additionalMerchantNotes?: string;
     simulateDemo?: boolean;
+    provider?: 'GEMINI' | 'OPENAI' | 'AUTO';
   }): Promise<GeneratedProduct> {
     return this.request<GeneratedProduct>('/api/v1/admin/ai/generate-product', {
       method: 'POST',

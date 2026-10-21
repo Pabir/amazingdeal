@@ -34,43 +34,27 @@ public class AiCatalogGeneratorService {
         boolean isSimulated = request.isSimulateDemo();
 
         if (!isSimulated) {
+            String requestedProvider = request.getProvider();
             String preference = tenant.getAiProviderPreference() != null ? tenant.getAiProviderPreference() : "AUTO";
+            String targetProvider = (requestedProvider != null && !requestedProvider.isBlank())
+                    ? requestedProvider.toUpperCase().trim()
+                    : preference.toUpperCase().trim();
+
             boolean hasGemini = geminiKey != null && !geminiKey.isBlank();
             boolean hasOpenAi = openAiToken != null && !openAiToken.isBlank() && !openAiToken.startsWith("simulated_");
 
-            if (!hasGemini && !hasOpenAi) {
-                throw new IllegalStateException("No AI provider connected. Please provide a free Google Gemini API key or OpenAI key, or use Instant Demo mode.");
-            }
-
-            // Route based on merchant preference or smart fallback
-            if ("GEMINI".equalsIgnoreCase(preference)) {
-                if (hasGemini) {
-                    try {
-                        return executeGeminiVisionRequest(geminiKey, tenant, request);
-                    } catch (Exception e) {
-                        if (hasOpenAi) {
-                            log.warn("Gemini vision failed ({}), attempting fallback to OpenAI...", e.getMessage());
-                            return executeOpenAiVisionRequest(openAiToken, tenant, request);
-                        }
-                        throw e;
-                    }
-                } else if (hasOpenAi) {
-                    return executeOpenAiVisionRequest(openAiToken, tenant, request);
+            if ("GEMINI".equals(targetProvider)) {
+                if (!hasGemini) {
+                    throw new IllegalStateException("Google Gemini API key is not configured. Please save your free Gemini API key to generate listings with Gemini.");
                 }
-            } else if ("OPENAI".equalsIgnoreCase(preference)) {
-                if (hasOpenAi) {
-                    try {
-                        return executeOpenAiVisionRequest(openAiToken, tenant, request);
-                    } catch (Exception e) {
-                        if (hasGemini) {
-                            log.warn("OpenAI vision failed ({}), attempting fallback to Gemini...", e.getMessage());
-                            return executeGeminiVisionRequest(geminiKey, tenant, request);
-                        }
-                        throw e;
-                    }
-                } else if (hasGemini) {
-                    return executeGeminiVisionRequest(geminiKey, tenant, request);
+                // Merchant explicitly chose Gemini: DO NOT fall back to OpenAI (which could fail due to $0 OpenAI credits)!
+                return executeGeminiVisionRequest(geminiKey, tenant, request);
+            } else if ("OPENAI".equals(targetProvider)) {
+                if (!hasOpenAi) {
+                    throw new IllegalStateException("OpenAI API key is not configured. Please save your OpenAI API key or connect ChatGPT.");
                 }
+                // Merchant explicitly chose OpenAI: DO NOT fall back to Gemini!
+                return executeOpenAiVisionRequest(openAiToken, tenant, request);
             } else {
                 // AUTO: Prioritize Google Gemini first (FREE tier for Indian merchants & Jio 5G users!)
                 if (hasGemini) {
@@ -78,13 +62,20 @@ public class AiCatalogGeneratorService {
                         return executeGeminiVisionRequest(geminiKey, tenant, request);
                     } catch (Exception e) {
                         if (hasOpenAi) {
-                            log.warn("Gemini vision failed ({}), falling back to OpenAI...", e.getMessage());
-                            return executeOpenAiVisionRequest(openAiToken, tenant, request);
+                            try {
+                                log.warn("Gemini vision failed ({}), attempting fallback to OpenAI in AUTO mode...", e.getMessage());
+                                return executeOpenAiVisionRequest(openAiToken, tenant, request);
+                            } catch (Exception openAiEx) {
+                                log.error("Both Gemini and OpenAI failed: gemini={}, openai={}", e.getMessage(), openAiEx.getMessage());
+                                throw new IllegalStateException("Gemini error (" + e.getMessage() + ") and OpenAI fallback also failed: " + openAiEx.getMessage(), e);
+                            }
                         }
                         throw e;
                     }
-                } else {
+                } else if (hasOpenAi) {
                     return executeOpenAiVisionRequest(openAiToken, tenant, request);
+                } else {
+                    throw new IllegalStateException("No AI provider connected. Please save a Google Gemini API key or OpenAI key, or run with Instant Demo.");
                 }
             }
         }
@@ -165,19 +156,45 @@ public class AiCatalogGeneratorService {
         headers.set("x-goog-api-key", geminiKey);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
 
-        ResponseEntity<String> response;
-        try {
-            response = restTemplate.postForEntity(endpoint, entity, String.class);
-        } catch (org.springframework.web.client.HttpStatusCodeException e) {
-            String geminiError = extractGeminiErrorMessage(e);
-            log.error("Google Gemini API error (HTTP {}): {}", e.getStatusCode(), geminiError);
-            throw new IllegalStateException(geminiError, e);
-        } catch (Exception e) {
-            log.error("Unexpected error during Gemini Vision call: {}", e.getMessage());
-            throw new IllegalStateException("Google Gemini request failed: " + e.getMessage(), e);
+        // Resilient model pool: if gemini-2.5-flash encounters high demand (503), try gemini-1.5-flash or flash-latest
+        List<String> modelsToTry = List.of("gemini-2.5-flash", "gemini-1.5-flash", "gemini-flash-latest");
+        ResponseEntity<String> response = null;
+        String successfulModel = "gemini-2.5-flash";
+        Exception lastException = null;
+
+        for (int i = 0; i < modelsToTry.size(); i++) {
+            String model = modelsToTry.get(i);
+            String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
+            try {
+                response = restTemplate.postForEntity(endpoint, entity, String.class);
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    successfulModel = model;
+                    break;
+                }
+            } catch (org.springframework.web.client.HttpStatusCodeException e) {
+                lastException = e;
+                int status = e.getStatusCode().value();
+                // If 503 (spikes in demand) or 429 (rate-limit spike), try next model in pool
+                if ((status == 503 || status == 429) && i < modelsToTry.size() - 1) {
+                    log.warn("Gemini model {} returned HTTP {}, trying next model in pool...", model, status);
+                    try { Thread.sleep(600); } catch (InterruptedException ignored) {}
+                    continue;
+                }
+                String geminiError = extractGeminiErrorMessage(e);
+                log.error("Google Gemini API error on model {} (HTTP {}): {}", model, e.getStatusCode(), geminiError);
+                throw new IllegalStateException(geminiError, e);
+            } catch (Exception e) {
+                lastException = e;
+                if (i < modelsToTry.size() - 1) {
+                    log.warn("Gemini model {} failed ({}), trying next model...", model, e.getMessage());
+                    continue;
+                }
+                log.error("Unexpected error during Gemini Vision call: {}", e.getMessage());
+                throw new IllegalStateException("Google Gemini request failed: " + e.getMessage(), e);
+            }
         }
 
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+        if (response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
             try {
                 JsonNode root = objectMapper.readTree(response.getBody());
                 JsonNode candidate = root.path("candidates").get(0);
@@ -217,7 +234,7 @@ public class AiCatalogGeneratorService {
                         .estimatedUnit(productJson.path("estimatedUnit").asText("1 Unit"))
                         .inventoryQuantity(productJson.path("inventoryQuantity").asInt(50))
                         .imageUrl(displayImg)
-                        .poweredBy("Google Gemini Flash (Free Tier / Jio 5G)")
+                        .poweredBy("Google Gemini (" + successfulModel + ")")
                         .build();
             } catch (Exception e) {
                 log.error("Failed to parse Gemini response: {}", e.getMessage());
@@ -225,7 +242,7 @@ public class AiCatalogGeneratorService {
             }
         }
 
-        throw new IllegalStateException("Google Gemini returned non-200 status: " + response.getStatusCode());
+        throw new IllegalStateException("Google Gemini returned non-200 status" + (response != null ? ": " + response.getStatusCode() : ""));
     }
 
     private String extractGeminiErrorMessage(org.springframework.web.client.HttpStatusCodeException e) {
@@ -242,11 +259,17 @@ public class AiCatalogGeneratorService {
                     if ("RESOURCE_EXHAUSTED".equalsIgnoreCase(status) || e.getStatusCode().value() == 429) {
                         return "Google Gemini free tier quota limit reached. Please wait a minute or run with Instant Demo mode.";
                     }
+                    if ("UNAVAILABLE".equalsIgnoreCase(status) || e.getStatusCode().value() == 503 || msg.toLowerCase().contains("high demand")) {
+                        return "Google Gemini is currently experiencing temporary high demand spikes (503). Please retry in a few seconds or choose Generate with OpenAI / Instant Demo.";
+                    }
                     return "Google Gemini Error: " + msg;
                 }
             }
         } catch (Exception ignored) {}
 
+        if (e.getStatusCode().value() == 503) {
+            return "Google Gemini servers are temporarily busy (503). Please try again in a few moments or choose Generate with OpenAI / Instant Demo.";
+        }
         if (e.getStatusCode().value() == 400 || e.getStatusCode().value() == 403) {
             return "Invalid Google Gemini API key. Please check your key at https://aistudio.google.com/app/apikey";
         }
