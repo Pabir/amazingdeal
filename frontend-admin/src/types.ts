@@ -27,6 +27,7 @@ export interface Product {
   inventoryQuantity: number;
   tracksInventory: boolean;
   imageUrl?: string;
+  imagesJson?: string;
   category?: string;
   status: 'ACTIVE' | 'OUT_OF_STOCK' | 'DRAFT';
   createdAt?: string;
@@ -109,6 +110,35 @@ export interface GeneratedProduct {
   ingredientsOrSpecs?: string;
   estimatedUnit?: string;
   imageUrl?: string;
+  imagesJson?: string;
+  angles?: AiPhotoAngle[];
   inventoryQuantity: number;
+  poweredBy?: string;
+}
+
+export interface AiPhotoAngle {
+  angle: string;       // "0°", "45°", "90°", "180°", "Podium", "Macro"
+  label: string;       // "Front View", "Quarter Angle", "Side Profile", "Rear View", etc.
+  imageUrl: string;
+  isPrimary?: boolean;
+}
+
+export interface AiPhotoEnhanceRequest {
+  command?: string;
+  productTitle?: string;
+  category?: string;
+  base64Image?: string;
+  currentImageUrl?: string;
+  customPrompt?: string;
+  provider?: string;
+}
+
+export interface AiPhotoEnhanceResponse {
+  command: string;
+  styleName: string;
+  description: string;
+  primaryImageUrl: string;
+  angles: AiPhotoAngle[];
+  suggestedCommands: string[];
   poweredBy?: string;
 }

@@ -1,4 +1,4 @@
-import { AuthResponse, Order, OrderStats, Product, Tenant, ChatGptStatus, ChatGptAuthUrlResponse, GeneratedProduct } from '../types';
+import { AuthResponse, Order, OrderStats, Product, Tenant, ChatGptStatus, ChatGptAuthUrlResponse, GeneratedProduct, AiPhotoEnhanceRequest, AiPhotoEnhanceResponse } from '../types';
 
 const getApiBase = (): string => {
   if (typeof window !== 'undefined') {
@@ -267,6 +267,13 @@ export class ApiService {
     provider?: 'GEMINI' | 'OPENAI' | 'AUTO';
   }): Promise<GeneratedProduct> {
     return this.request<GeneratedProduct>('/api/v1/admin/ai/generate-product', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  public static async enhanceProductPhoto(data: AiPhotoEnhanceRequest): Promise<AiPhotoEnhanceResponse> {
+    return this.request<AiPhotoEnhanceResponse>('/api/v1/admin/ai/enhance-photo', {
       method: 'POST',
       body: JSON.stringify(data),
     });

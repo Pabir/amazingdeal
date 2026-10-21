@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
-import { Plus, Search, Check, AlertCircle, Trash2, Edit3, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Plus, Search, Check, AlertCircle, Trash2, Edit3, Image as ImageIcon, Sparkles, RotateCw } from 'lucide-react';
 import { ApiService } from '../services/api';
 import { AiProductScannerModal } from './AiProductScannerModal';
 
@@ -183,6 +183,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ products, onRefr
                   {product.category && (
                     <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-white/90 backdrop-blur-sm text-slate-700 shadow-sm">
                       {product.category}
+                    </span>
+                  )}
+                  {product.imagesJson && (
+                    <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-950/85 backdrop-blur-sm text-emerald-400 flex items-center space-x-1 shadow-sm border border-emerald-500/20">
+                      <RotateCw className="w-2.5 h-2.5 text-emerald-400" />
+                      <span>360° Studio</span>
                     </span>
                   )}
                   <button

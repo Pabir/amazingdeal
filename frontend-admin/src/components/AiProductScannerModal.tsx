@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Upload, Image as ImageIcon, CheckCircle2, ArrowRight, Loader2, X, AlertCircle, RefreshCw, Key, ShieldCheck, Tag } from 'lucide-react';
+import { 
+  Sparkles, Upload, Image as ImageIcon, CheckCircle2, ArrowRight, Loader2, 
+  X, AlertCircle, RefreshCw, Key, ShieldCheck, Tag, RotateCw, Play, Pause, 
+  Wand2, Sliders, ChevronLeft, ChevronRight 
+} from 'lucide-react';
 import { ApiService } from '../services/api';
-import { ChatGptStatus, GeneratedProduct } from '../types';
+import { ChatGptStatus, GeneratedProduct, AiPhotoAngle } from '../types';
 
 interface AiProductScannerModalProps {
   isOpen: boolean;
@@ -32,6 +36,15 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
   const [generatedDraft, setGeneratedDraft] = useState<GeneratedProduct | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // 360 Studio & Multi-Angle Commands State
+  const [studioAngles, setStudioAngles] = useState<AiPhotoAngle[]>([]);
+  const [activeAngleIndex, setActiveAngleIndex] = useState<number>(0);
+  const [isRotating, setIsRotating] = useState<boolean>(false);
+  const [enhancingPhoto, setEnhancingPhoto] = useState<boolean>(false);
+  const [commandInput, setCommandInput] = useState<string>('/360');
+  const [activeCommandBadge, setActiveCommandBadge] = useState<string>('/360');
+  const [studioStyleName, setStudioStyleName] = useState<string>('360° Multi-Angle Turnaround Studio');
 
   // Separate API Key Inputs for Gemini and OpenAI
   const [showKeyInput, setShowKeyInput] = useState(false);
@@ -216,6 +229,55 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
     setBase64Image('');
   };
 
+  // Auto-spin 360 turntable
+  useEffect(() => {
+    let timer: any;
+    if (isRotating && studioAngles.length > 1) {
+      timer = setInterval(() => {
+        setActiveAngleIndex((prev) => (prev + 1) % studioAngles.length);
+      }, 950);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isRotating, studioAngles.length]);
+
+  const handleRunCommand = async (cmdToRun?: string) => {
+    const rawCmd = (cmdToRun || commandInput).trim();
+    const targetCmd = rawCmd.startsWith('/') ? rawCmd : `/${rawCmd}`;
+    if (!targetCmd) return;
+    try {
+      setEnhancingPhoto(true);
+      setError(null);
+      setActiveCommandBadge(targetCmd);
+      const res = await ApiService.enhanceProductPhoto({
+        command: targetCmd,
+        productTitle: generatedDraft?.title || '',
+        category: generatedDraft?.category || '',
+        base64Image: base64Image || undefined,
+        currentImageUrl: imagePreview || generatedDraft?.imageUrl || undefined,
+      });
+
+      if (res.angles && res.angles.length > 0) {
+        setStudioAngles(res.angles);
+        const primaryIdx = res.angles.findIndex(a => a.imageUrl === res.primaryImageUrl);
+        setActiveAngleIndex(primaryIdx >= 0 ? primaryIdx : 0);
+      }
+      setStudioStyleName(res.styleName || targetCmd);
+      if (res.primaryImageUrl && generatedDraft) {
+        setGeneratedDraft({
+          ...generatedDraft,
+          imageUrl: res.primaryImageUrl,
+          imagesJson: JSON.stringify(res.angles.map(a => a.imageUrl)),
+        });
+      }
+    } catch (err: any) {
+      setError('Failed to enhance photo: ' + err.message);
+    } finally {
+      setEnhancingPhoto(false);
+    }
+  };
+
   const handleAnalyzePhoto = async (engine: 'GEMINI' | 'OPENAI' | 'DEMO') => {
     if (!imagePreview && !imageUrl && !base64Image) {
       setError('Please select or upload a product photo first.');
@@ -249,6 +311,12 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
       });
 
       setGeneratedDraft(res);
+      if (res.angles && res.angles.length > 0) {
+        setStudioAngles(res.angles);
+        setActiveAngleIndex(0);
+        setActiveCommandBadge('/360');
+        setStudioStyleName('360° Multi-Angle Turnaround Studio');
+      }
     } catch (e: any) {
       setError(e.message || 'Failed to analyze product photo. Please try again.');
     } finally {
@@ -263,13 +331,22 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
       setSubmitting(true);
       setError(null);
 
+      const currentCover = (studioAngles.length > 0 && studioAngles[activeAngleIndex])
+        ? studioAngles[activeAngleIndex].imageUrl
+        : (generatedDraft.imageUrl || imagePreview || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80');
+
+      const allAnglesJson = studioAngles.length > 0
+        ? JSON.stringify(studioAngles.map(a => a.imageUrl))
+        : (generatedDraft.imagesJson || undefined);
+
       await ApiService.createProduct({
         title: generatedDraft.title,
         description: generatedDraft.description,
         price: generatedDraft.suggestedPrice,
         comparePrice: generatedDraft.comparePrice,
-        category: generatedDraft.category || 'Groceries',
-        imageUrl: imagePreview || generatedDraft.imageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
+        category: generatedDraft.category || 'Apparel & Clothing',
+        imageUrl: currentCover,
+        imagesJson: allAnglesJson,
         inventoryQuantity: generatedDraft.inventoryQuantity || 50,
         tracksInventory: true,
         status: 'ACTIVE',
@@ -291,6 +368,12 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
     setImagePreview('');
     setNotes('');
     setGeneratedDraft(null);
+    setStudioAngles([]);
+    setActiveAngleIndex(0);
+    setIsRotating(false);
+    setCommandInput('/360');
+    setActiveCommandBadge('/360');
+    setStudioStyleName('360° Multi-Angle Turnaround Studio');
     setError(null);
   };
 
@@ -300,7 +383,7 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-3xl w-full overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-5xl w-full overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 px-6 py-4 text-white flex items-center justify-between border-b border-emerald-500/20">
@@ -777,18 +860,206 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                 
-                {/* Photo Preview & Key Highlights */}
-                <div className="space-y-3">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2 overflow-hidden flex items-center justify-center">
-                    <img
-                      src={imagePreview || generatedDraft.imageUrl}
-                      alt={generatedDraft.title}
-                      className="max-h-48 object-contain rounded-xl shadow-sm"
-                    />
+                {/* Left Column: AI Studio 360° Enhancer & Turntable (5 cols) */}
+                <div className="lg:col-span-5 space-y-3">
+                  
+                  {/* AI Studio Command & Preset Bar */}
+                  <div className="bg-slate-900 text-white rounded-2xl p-3 shadow-md border border-slate-800">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-200">
+                          AI Studio Enhancer
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        {activeCommandBadge}
+                      </span>
+                    </div>
+
+                    {/* Quick Command Chips */}
+                    <div className="flex flex-wrap gap-1.5 mb-2.5">
+                      {[
+                        { cmd: '/360', label: '🔄 /360 Spin', desc: 'Interactive 360° Turnaround' },
+                        { cmd: '/studio', label: '⚪ /studio', desc: 'Pure White Catalog' },
+                        { cmd: '/podium', label: '🏛️ /podium', desc: 'Luxury Showroom Podium' },
+                        { cmd: '/macro', label: '🔍 /macro', desc: '8K Fabric Detail Zoom' },
+                        { cmd: '/lifestyle', label: '🌿 /lifestyle', desc: 'Editorial Living Staging' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.cmd}
+                          type="button"
+                          disabled={enhancingPhoto}
+                          onClick={() => {
+                            setCommandInput(preset.cmd);
+                            handleRunCommand(preset.cmd);
+                          }}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center space-x-1 ${
+                            activeCommandBadge.toLowerCase() === preset.cmd.toLowerCase()
+                              ? 'bg-emerald-500 text-slate-950 shadow-sm shadow-emerald-500/30'
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                          }`}
+                          title={preset.desc}
+                        >
+                          <span>{preset.label}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Slash Command Input Box */}
+                    <div className="flex items-center space-x-1.5">
+                      <div className="relative flex-1">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 font-mono text-xs font-bold">
+                          /
+                        </span>
+                        <input
+                          type="text"
+                          value={commandInput.startsWith('/') ? commandInput.slice(1) : commandInput}
+                          onChange={(e) => setCommandInput('/' + e.target.value.replace(/^\/+/, ''))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleRunCommand();
+                            }
+                          }}
+                          placeholder="360, podium, studio, macro..."
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-6 pr-2 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        disabled={enhancingPhoto}
+                        onClick={() => handleRunCommand()}
+                        className="px-2.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold rounded-xl text-xs transition-all flex items-center space-x-1 disabled:opacity-50"
+                      >
+                        {enhancingPhoto ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Wand2 className="w-3.5 h-3.5" />
+                        )}
+                        <span>Enhance</span>
+                      </button>
+                    </div>
                   </div>
 
+                  {/* 360 Turntable Stage */}
+                  <div className="relative rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-100 to-slate-200/80 p-2 overflow-hidden flex flex-col items-center justify-center shadow-inner group">
+                    {/* Floating badges */}
+                    <div className="absolute top-3 left-3 z-10 flex items-center space-x-1.5">
+                      <span className="px-2 py-0.5 rounded-full bg-slate-900/85 backdrop-blur text-white text-[10px] font-bold flex items-center space-x-1 shadow">
+                        <RotateCw className={`w-3 h-3 text-emerald-400 ${isRotating ? 'animate-spin' : ''}`} />
+                        <span>360° Studio</span>
+                      </span>
+                      {enhancingPhoto && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/90 text-slate-950 text-[10px] font-bold flex items-center space-x-1 animate-pulse">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Rendering...</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="absolute top-3 right-3 z-10">
+                      <span className="px-2 py-0.5 rounded-full bg-white/90 backdrop-blur text-slate-700 text-[10px] font-bold border border-slate-200 shadow-sm">
+                        {studioAngles[activeAngleIndex]?.label || '0° Front View'}
+                      </span>
+                    </div>
+
+                    {/* Turntable Image Display */}
+                    <div className="w-full h-52 flex items-center justify-center p-2">
+                      <img
+                        src={
+                          studioAngles[activeAngleIndex]?.imageUrl ||
+                          generatedDraft.imageUrl ||
+                          imagePreview ||
+                          '/studio/cargo_0_front.jpg'
+                        }
+                        alt={generatedDraft.title}
+                        className="max-h-48 w-auto object-contain rounded-xl drop-shadow-md transition-all duration-300"
+                      />
+                    </div>
+
+                    {/* Interactive 360 Scrubber / Rotation Slider */}
+                    {studioAngles.length > 1 && (
+                      <div className="w-full px-2 pt-1 pb-2 space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsRotating(!isRotating)}
+                            className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center ${
+                              isRotating
+                                ? 'bg-amber-500 text-slate-950 shadow-sm'
+                                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300'
+                            }`}
+                            title={isRotating ? 'Pause rotation' : 'Auto-spin 360°'}
+                          >
+                            {isRotating ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                          </button>
+
+                          <input
+                            type="range"
+                            min={0}
+                            max={studioAngles.length - 1}
+                            value={activeAngleIndex}
+                            onChange={(e) => {
+                              setIsRotating(false);
+                              setActiveAngleIndex(Number(e.target.value));
+                            }}
+                            className="w-full accent-emerald-600 h-1.5 bg-slate-300 rounded-lg cursor-pointer"
+                          />
+
+                          <span className="text-[10px] font-mono font-bold text-slate-600 w-8 text-right">
+                            {studioAngles[activeAngleIndex]?.angle || '0°'}
+                          </span>
+                        </div>
+
+                        {/* Angle Pills */}
+                        <div className="grid grid-cols-3 gap-1">
+                          {studioAngles.map((angleItem, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                setIsRotating(false);
+                                setActiveAngleIndex(idx);
+                              }}
+                              className={`px-1.5 py-1 rounded-md text-[9px] font-bold truncate transition-all text-center border ${
+                                activeAngleIndex === idx
+                                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                  : 'bg-white/80 hover:bg-white text-slate-700 border-slate-200'
+                              }`}
+                            >
+                              {angleItem.angle} {angleItem.label.split(' ')[0]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Set as Primary Cover Button */}
+                    <div className="w-full pt-1 flex items-center justify-between text-[11px] text-slate-500 px-1 border-t border-slate-200/60 mt-1">
+                      <span className="truncate max-w-[140px] text-[10px]" title={studioStyleName}>
+                        {studioStyleName}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (studioAngles[activeAngleIndex]) {
+                            setGeneratedDraft({
+                              ...generatedDraft,
+                              imageUrl: studioAngles[activeAngleIndex].imageUrl,
+                            });
+                          }
+                        }}
+                        className="text-[10px] text-emerald-700 hover:text-emerald-800 font-bold hover:underline flex items-center space-x-1"
+                      >
+                        <span>Set as Main Cover</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Key Highlights */}
                   {generatedDraft.keyHighlights && generatedDraft.keyHighlights.length > 0 && (
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
                       <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
@@ -806,8 +1077,8 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
                   )}
                 </div>
 
-                {/* Form Fields */}
-                <div className="md:col-span-2 space-y-3">
+                {/* Right Column: Form Fields (7 cols) */}
+                <div className="lg:col-span-7 space-y-3">
                   
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
