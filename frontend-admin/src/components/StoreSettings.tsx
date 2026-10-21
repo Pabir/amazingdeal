@@ -56,6 +56,22 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
     }
   };
 
+  const handleSimulateConnect = async () => {
+    try {
+      setAiLoading(true);
+      const res = await ApiService.handleChatGptCallback({
+        code: 'simulated_test_code_' + Date.now(),
+      });
+      setAiStatus(res);
+      setAiMessage('✨ Connected simulated ChatGPT Plus account for testing!');
+      setTimeout(() => setAiMessage(null), 4000);
+    } catch (e: any) {
+      setAiMessage('Simulated connect failed: ' + e.message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const handleDisconnect = async () => {
     if (!confirm('Are you sure you want to disconnect your ChatGPT subscription / API key?')) return;
     try {
@@ -224,6 +240,15 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Sign in with ChatGPT Plan</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSimulateConnect}
+                    className="inline-flex items-center space-x-1 px-3 py-2 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold transition-all"
+                    title="Simulate ChatGPT Plus connection for testing without external OpenAI OAuth"
+                  >
+                    <span>⚡ Instant Demo Connect</span>
                   </button>
 
                   <span className="text-xs text-slate-500">or enter OpenAI Key:</span>
