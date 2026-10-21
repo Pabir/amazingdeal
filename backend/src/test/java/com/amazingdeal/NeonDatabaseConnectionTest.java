@@ -12,6 +12,7 @@ import java.sql.Statement;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @SpringBootTest
 @TestPropertySource(properties = {
@@ -36,6 +37,40 @@ class NeonDatabaseConnectionTest {
             String version = rs.getString(1);
             System.out.println(">>> SUCCESSFULLY CONNECTED TO CLOUD NEON POSTGRESQL! <<<");
             System.out.println(">>> PostgreSQL Version: " + version);
+
+            ResultSet colRs = statement.executeQuery(
+                "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'tenants' AND column_name = 'custom_openai_api_key'"
+            );
+            if (colRs.next()) {
+                System.out.println("tenants.custom_openai_api_key data_type = " + colRs.getString("data_type"));
+            }
         }
+    }
+
+    @Autowired
+    private com.amazingdeal.modules.ai.service.ChatGptOAuthService chatGptOAuthService;
+
+    @Autowired
+    private com.amazingdeal.modules.tenant.repository.TenantRepository tenantRepository;
+
+    @Test
+    void testSaveCustomApiKeyWithLongProjectKey() {
+        var existingTenants = tenantRepository.findAll();
+        assertFalse(existingTenants.isEmpty(), "Expected at least one tenant in database");
+        var tenant = existingTenants.get(0);
+        String oldKey = tenant.getCustomOpenaiApiKey();
+
+        // A standard 164-character OpenAI Project API key (sk-proj-...)
+        String fakeLongApiKey = "sk-proj-1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstu";
+        assertTrue(fakeLongApiKey.length() >= 160);
+
+        var response = chatGptOAuthService.saveCustomApiKey(tenant.getId(), fakeLongApiKey);
+        assertNotNull(response);
+        assertTrue(response.isHasCustomApiKey());
+        System.out.println(">>> Successfully saved long custom API key! Masked: " + response.getMaskedApiKey());
+
+        // Restore
+        tenant.setCustomOpenaiApiKey(oldKey);
+        tenantRepository.save(tenant);
     }
 }

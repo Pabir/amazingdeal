@@ -111,7 +111,7 @@ public class Tenant {
     @Column(name = "chatgpt_token_expires_at")
     private Instant chatgptTokenExpiresAt;
 
-    @Column(name = "custom_openai_api_key", length = 200)
+    @Column(name = "custom_openai_api_key", columnDefinition = "TEXT")
     private String customOpenaiApiKey;
 
     @CreationTimestamp

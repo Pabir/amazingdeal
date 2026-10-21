@@ -47,7 +47,7 @@ public class Product extends TenantAwareEntity {
     @Column(name = "tracks_inventory")
     private Boolean tracksInventory = false;
 
-    @Column(name = "image_url", length = 1000)
+    @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
 
     @Column(name = "images_json", columnDefinition = "TEXT")
