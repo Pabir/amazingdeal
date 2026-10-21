@@ -154,10 +154,16 @@ public class AiCatalogGeneratorService {
         headers.set("x-goog-api-key", geminiKey);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
 
-        // Resilient model pool: if gemini-2.5-flash encounters high demand (503), try gemini-1.5-flash or flash-latest
-        List<String> modelsToTry = List.of("gemini-2.5-flash", "gemini-1.5-flash", "gemini-flash-latest");
+        // Resilient model pool: starts with gemini-3.8-flash (recommended by Google), followed by 1.5-flash and flash-latest
+        List<String> modelsToTry = List.of(
+                "gemini-3.8-flash",
+                "gemini-1.5-flash",
+                "gemini-flash-latest",
+                "gemini-2.0-flash",
+                "gemini-1.5-flash-latest"
+        );
         ResponseEntity<String> response = null;
-        String successfulModel = "gemini-2.5-flash";
+        String successfulModel = "gemini-3.8-flash";
         Exception lastException = null;
 
         for (int i = 0; i < modelsToTry.size(); i++) {
@@ -172,14 +178,22 @@ public class AiCatalogGeneratorService {
             } catch (org.springframework.web.client.HttpStatusCodeException e) {
                 lastException = e;
                 int status = e.getStatusCode().value();
-                // If 503 (spikes in demand) or 429 (rate-limit spike), try next model in pool
-                if ((status == 503 || status == 429) && i < modelsToTry.size() - 1) {
-                    log.warn("Gemini model {} returned HTTP {}, trying next model in pool...", model, status);
-                    try { Thread.sleep(600); } catch (InterruptedException ignored) {}
+                String geminiError = extractGeminiErrorMessage(e);
+
+                // If API key is fundamentally invalid, fail fast
+                if (status == 401 || (status == 400 && geminiError.toLowerCase().contains("invalid google gemini api key"))) {
+                    log.error("Google Gemini authentication rejected: {}", geminiError);
+                    throw new IllegalStateException(geminiError, e);
+                }
+
+                // If not the last model in the pool, fallback to next model (handles model deprecations, 503 high demand, 429 quota spikes)
+                if (i < modelsToTry.size() - 1) {
+                    log.warn("Gemini model {} returned HTTP {} ({}), attempting next candidate model...", model, status, geminiError);
+                    try { Thread.sleep(400); } catch (InterruptedException ignored) {}
                     continue;
                 }
-                String geminiError = extractGeminiErrorMessage(e);
-                log.error("Google Gemini API error on model {} (HTTP {}): {}", model, e.getStatusCode(), geminiError);
+
+                log.error("All Gemini models exhausted. Final error on model {} (HTTP {}): {}", model, status, geminiError);
                 throw new IllegalStateException(geminiError, e);
             } catch (Exception e) {
                 lastException = e;

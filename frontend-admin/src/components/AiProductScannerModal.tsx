@@ -312,7 +312,7 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
               <div className="flex items-center space-x-2">
                 <h3 className="font-extrabold text-base tracking-tight text-white">AI Magic Product Studio</h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  {chatGptStatus?.hasCustomGeminiKey ? 'Gemini 1.5 Flash' : chatGptStatus?.hasCustomApiKey ? 'GPT-4o Vision' : 'AI Vision'}
+                  {chatGptStatus?.hasCustomGeminiKey ? 'Google Gemini' : chatGptStatus?.hasCustomApiKey ? 'GPT-4o Vision' : 'AI Vision'}
                 </span>
               </div>
               <p className="text-xs text-slate-300">
