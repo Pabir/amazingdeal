@@ -114,6 +114,13 @@ public class Tenant {
     @Column(name = "custom_openai_api_key", columnDefinition = "TEXT")
     private String customOpenaiApiKey;
 
+    @Column(name = "custom_gemini_api_key", columnDefinition = "TEXT")
+    private String customGeminiApiKey;
+
+    @Builder.Default
+    @Column(name = "ai_provider_preference", length = 20)
+    private String aiProviderPreference = "AUTO"; // AUTO, GEMINI, OPENAI
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;

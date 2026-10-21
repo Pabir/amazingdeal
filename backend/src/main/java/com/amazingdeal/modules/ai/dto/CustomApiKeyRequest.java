@@ -13,4 +13,6 @@ import lombok.NoArgsConstructor;
 public class CustomApiKeyRequest {
     @NotBlank(message = "API key cannot be empty")
     private String apiKey;
+
+    private String provider; // Optional: "GEMINI", "OPENAI", or auto-detected
 }

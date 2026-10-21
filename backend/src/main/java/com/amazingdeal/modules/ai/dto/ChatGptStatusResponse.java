@@ -18,5 +18,9 @@ public class ChatGptStatusResponse {
     private Instant expiresAt;
     private boolean hasCustomApiKey;
     private String maskedApiKey;
-    private String connectionType; // "CHATGPT_SUBSCRIPTION" or "CUSTOM_API_KEY" or "DISCONNECTED"
+    private boolean hasCustomGeminiKey;
+    private String maskedGeminiKey;
+    private String aiProviderPreference; // "AUTO", "GEMINI", "OPENAI"
+    private String activeProvider; // "GEMINI", "OPENAI", "DEMO", "DISCONNECTED"
+    private String connectionType; // "CHATGPT_SUBSCRIPTION" or "CUSTOM_API_KEY" or "GEMINI_API_KEY" or "DISCONNECTED"
 }

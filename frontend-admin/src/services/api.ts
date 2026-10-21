@@ -221,6 +221,26 @@ export class ApiService {
     });
   }
 
+  public static async saveCustomGeminiApiKey(apiKey: string): Promise<ChatGptStatus> {
+    return this.request<ChatGptStatus>('/api/v1/admin/ai/gemini/custom-api-key', {
+      method: 'POST',
+      body: JSON.stringify({ apiKey }),
+    });
+  }
+
+  public static async disconnectGemini(): Promise<ChatGptStatus> {
+    return this.request<ChatGptStatus>('/api/v1/admin/ai/gemini/disconnect', {
+      method: 'POST',
+    });
+  }
+
+  public static async setAiProviderPreference(preference: 'AUTO' | 'GEMINI' | 'OPENAI'): Promise<ChatGptStatus> {
+    return this.request<ChatGptStatus>('/api/v1/admin/ai/provider-preference', {
+      method: 'POST',
+      body: JSON.stringify({ preference }),
+    });
+  }
+
   public static async generateProductFromImage(data: {
     imageUrl?: string;
     base64Image?: string;

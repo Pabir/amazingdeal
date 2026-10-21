@@ -85,7 +85,11 @@ export interface ChatGptStatus {
   expiresAt?: string;
   hasCustomApiKey: boolean;
   maskedApiKey?: string;
-  connectionType: 'CHATGPT_SUBSCRIPTION' | 'CUSTOM_API_KEY' | 'DISCONNECTED';
+  hasCustomGeminiKey?: boolean;
+  maskedGeminiKey?: string;
+  aiProviderPreference?: 'AUTO' | 'GEMINI' | 'OPENAI';
+  activeProvider?: 'GEMINI' | 'OPENAI' | 'DEMO' | 'DISCONNECTED';
+  connectionType: 'CHATGPT_SUBSCRIPTION' | 'CUSTOM_API_KEY' | 'GEMINI_API_KEY' | 'GEMINI_AND_OPENAI' | 'DISCONNECTED';
 }
 
 export interface ChatGptAuthUrlResponse {

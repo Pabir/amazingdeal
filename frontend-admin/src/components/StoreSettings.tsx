@@ -19,11 +19,13 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
   const [storeTimings, setStoreTimings] = useState(tenant?.storeTimings || '8:00 AM - 10:00 PM');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // AI & ChatGPT Plan State
+  // AI & Multi-Provider State
   const [aiStatus, setAiStatus] = useState<ChatGptStatus | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [customKey, setCustomKey] = useState('');
+  const [geminiKey, setGeminiKey] = useState('');
   const [savingKey, setSavingKey] = useState(false);
+  const [savingGeminiKey, setSavingGeminiKey] = useState(false);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -73,12 +75,12 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
   };
 
   const handleDisconnect = async () => {
-    if (!confirm('Are you sure you want to disconnect your ChatGPT subscription / API key?')) return;
+    if (!confirm('Are you sure you want to disconnect your OpenAI API key?')) return;
     try {
       setAiLoading(true);
       const res = await ApiService.disconnectChatGpt();
       setAiStatus(res);
-      setAiMessage('Disconnected successfully.');
+      setAiMessage('OpenAI key disconnected.');
       setTimeout(() => setAiMessage(null), 3000);
     } catch (e: any) {
       setAiMessage('Failed to disconnect: ' + e.message);
@@ -103,6 +105,54 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
       alert('Failed to save API key: ' + e.message);
     } finally {
       setSavingKey(false);
+    }
+  };
+
+  const handleSaveGeminiKey = async () => {
+    if (!geminiKey.trim().startsWith('AIza')) {
+      alert('Please enter a valid Google Gemini key starting with "AIza..."');
+      return;
+    }
+    try {
+      setSavingGeminiKey(true);
+      const res = await ApiService.saveCustomGeminiApiKey(geminiKey.trim());
+      setAiStatus(res);
+      setGeminiKey('');
+      setAiMessage('✨ Google Gemini API key saved & activated!');
+      setTimeout(() => setAiMessage(null), 3000);
+    } catch (e: any) {
+      alert('Failed to save Gemini key: ' + e.message);
+    } finally {
+      setSavingGeminiKey(false);
+    }
+  };
+
+  const handleDisconnectGemini = async () => {
+    if (!confirm('Are you sure you want to remove your Google Gemini API key?')) return;
+    try {
+      setAiLoading(true);
+      const res = await ApiService.disconnectGemini();
+      setAiStatus(res);
+      setAiMessage('Google Gemini key disconnected.');
+      setTimeout(() => setAiMessage(null), 3000);
+    } catch (e: any) {
+      setAiMessage('Failed to disconnect Gemini: ' + e.message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleProviderPreferenceChange = async (pref: 'AUTO' | 'GEMINI' | 'OPENAI') => {
+    try {
+      setAiLoading(true);
+      const res = await ApiService.setAiProviderPreference(pref);
+      setAiStatus(res);
+      setAiMessage(`AI provider preference updated to ${pref}.`);
+      setTimeout(() => setAiMessage(null), 3000);
+    } catch (e: any) {
+      setAiMessage('Failed to update preference: ' + e.message);
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -167,57 +217,40 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
             </div>
           </div>
 
-          {/* AI Product Studio (BYOK - Bring Your Own OpenAI Key) */}
+          {/* AI Product Studio (Multi-Provider: Google Gemini & OpenAI) */}
           <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-950 to-emerald-950 border border-emerald-500/30 text-white space-y-4 shadow-lg shadow-emerald-950/20">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-emerald-500/20 pb-3">
               <div className="flex items-center space-x-2.5">
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-400 to-teal-300 flex items-center justify-center text-slate-950 shadow-md shadow-emerald-400/20 font-black">
-                  <Key className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
                   <h4 className="font-extrabold text-sm text-white flex items-center gap-2">
-                    <span>AI Product Studio (OpenAI BYOK)</span>
+                    <span>AI Product Studio (Gemini & OpenAI)</span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Zero Platform Markup
+                      Multi-Provider Engine
                     </span>
                   </h4>
                   <p className="text-[11px] text-slate-300">
-                    Auto-generate attractive catalog listings directly from product photos using your own OpenAI Key.
+                    Auto-generate attractive catalog listings directly from product photos with 0% platform markup.
                   </p>
                 </div>
               </div>
 
-              {aiStatus?.hasCustomApiKey ? (
-                <div className="flex items-center space-x-2">
-                  <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Active Key ({aiStatus.maskedApiKey})</span>
+              <div className="flex items-center space-x-2">
+                {aiStatus?.hasCustomGeminiKey && (
+                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                    <CheckCircle2 className="w-3 h-3 text-blue-400" />
+                    <span>Gemini: {aiStatus.maskedGeminiKey}</span>
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleDisconnect}
-                    className="p-1.5 rounded-lg bg-white/10 hover:bg-red-500/20 hover:text-red-300 text-slate-400 transition-colors"
-                    title="Remove API Key"
-                  >
-                    <Unlink className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : aiStatus?.connected ? (
-                <div className="flex items-center space-x-2">
-                  <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Demo Mode Active</span>
+                )}
+                {aiStatus?.hasCustomApiKey && (
+                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                    <span>OpenAI: {aiStatus.maskedApiKey}</span>
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleDisconnect}
-                    className="p-1.5 rounded-lg bg-white/10 hover:bg-red-500/20 hover:text-red-300 text-slate-400 transition-colors"
-                    title="Disconnect"
-                  >
-                    <Unlink className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : null}
+                )}
+              </div>
             </div>
 
             {aiMessage && (
@@ -226,87 +259,224 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
               </div>
             )}
 
-            {!aiStatus?.hasCustomApiKey && !aiStatus?.connected ? (
-              <div className="space-y-3">
-                <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs space-y-1.5">
+            {/* Provider Preference Selector */}
+            <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="space-y-0.5">
+                <span className="font-bold text-emerald-300 block">AI Routing Preference:</span>
+                <span className="text-[11px] text-slate-300">Choose how photos should be processed by default</span>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleProviderPreferenceChange('AUTO')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                    (aiStatus?.aiProviderPreference || 'AUTO') === 'AUTO'
+                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                      : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  ⚡ Auto (Gemini Free ➔ OpenAI)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleProviderPreferenceChange('GEMINI')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                    aiStatus?.aiProviderPreference === 'GEMINI'
+                      ? 'bg-blue-500 text-white shadow-sm'
+                      : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  🔷 Gemini Only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleProviderPreferenceChange('OPENAI')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                    aiStatus?.aiProviderPreference === 'OPENAI'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-slate-700/60 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  🟢 OpenAI Only
+                </button>
+              </div>
+            </div>
+
+            {/* Dual Provider Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              {/* CARD 1: Google Gemini Flash (Recommended / Free Tier) */}
+              <div className="p-4 rounded-xl bg-slate-800/40 border border-blue-500/30 flex flex-col justify-between space-y-3">
+                <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-emerald-300">💡 Why Bring Your Own Key (BYOK)?</span>
+                    <span className="font-extrabold text-xs text-blue-300 flex items-center space-x-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Google Gemini 1.5 Flash</span>
+                    </span>
+                    <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded-full font-bold">
+                      Free Tier / Jio 5G
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    100% Free tier available with no credit card required. Perfect for Jio 5G users and Indian small business owners.
+                  </p>
+                </div>
+
+                {aiStatus?.hasCustomGeminiKey ? (
+                  <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-1.5 text-blue-300 font-mono text-[11px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                      <span>{aiStatus.maskedGeminiKey}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newKey = prompt('Enter your new Google Gemini API key (AIza...):');
+                          if (newKey && newKey.trim().startsWith('AIza')) {
+                            setGeminiKey(newKey.trim());
+                            handleSaveGeminiKey();
+                          }
+                        }}
+                        className="text-[11px] text-blue-300 hover:text-blue-200 underline font-semibold"
+                      >
+                        Update
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDisconnectGemini}
+                        className="text-[11px] text-red-300 hover:text-red-200 underline font-semibold"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="password"
+                        placeholder="Paste Gemini Key (AIza...)"
+                        value={geminiKey}
+                        onChange={(e) => setGeminiKey(e.target.value)}
+                        className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-blue-400"
+                      />
+                      <button
+                        type="button"
+                        disabled={savingGeminiKey || !geminiKey}
+                        onClick={handleSaveGeminiKey}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold disabled:opacity-40 transition-all shrink-0"
+                      >
+                        {savingGeminiKey ? 'Saving...' : 'Activate'}
+                      </button>
+                    </div>
+                    <a
+                      href="https://aistudio.google.com/app/apikey"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-blue-300 hover:text-blue-200 underline font-semibold flex items-center space-x-1"
+                    >
+                      <span>Get 100% Free Key (Google AI Studio)</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* CARD 2: OpenAI GPT-4o Vision (BYOK) */}
+              <div className="p-4 rounded-xl bg-slate-800/40 border border-emerald-500/30 flex flex-col justify-between space-y-3">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-xs text-emerald-300 flex items-center space-x-1.5">
+                      <Key className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>OpenAI GPT-4o Vision</span>
+                    </span>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
+                      BYOK
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Uses your personal OpenAI API credits at wholesale rates (~₹0.10/scan). Charged directly on your OpenAI account.
+                  </p>
+                </div>
+
+                {aiStatus?.hasCustomApiKey ? (
+                  <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-1.5 text-emerald-300 font-mono text-[11px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>{aiStatus.maskedApiKey}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newKey = prompt('Enter your new OpenAI API key (sk-...):');
+                          if (newKey && newKey.trim().startsWith('sk-')) {
+                            setCustomKey(newKey.trim());
+                            handleSaveKey();
+                          }
+                        }}
+                        className="text-[11px] text-emerald-300 hover:text-emerald-200 underline font-semibold"
+                      >
+                        Update
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDisconnect}
+                        className="text-[11px] text-red-300 hover:text-red-200 underline font-semibold"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="password"
+                        placeholder="Paste OpenAI Key (sk-...)"
+                        value={customKey}
+                        onChange={(e) => setCustomKey(e.target.value)}
+                        className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                      />
+                      <button
+                        type="button"
+                        disabled={savingKey || !customKey}
+                        onClick={handleSaveKey}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold disabled:opacity-40 transition-all shrink-0"
+                      >
+                        {savingKey ? 'Saving...' : 'Activate'}
+                      </button>
+                    </div>
                     <a
                       href="https://platform.openai.com/api-keys"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[11px] text-teal-300 hover:text-teal-200 underline font-semibold flex items-center space-x-1"
                     >
-                      <span>Get an API Key from OpenAI</span>
+                      <span>Get OpenAI API Key</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
-                  <p className="text-slate-300 text-[11px] leading-relaxed">
-                    By providing your own OpenAI key, all photo scans are private to your business and billed directly to you at OpenAI's wholesale prices (~₹0.05 to ₹0.15 per product photo scan using GPT-4o-mini). AmazingDeal charges ₹0 markup.
-                  </p>
-                </div>
+                )}
+              </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                  <div className="relative flex-1">
-                    <input
-                      type="password"
-                      placeholder="Paste your OpenAI Key (sk-...)"
-                      value={customKey}
-                      onChange={(e) => setCustomKey(e.target.value)}
-                      className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    disabled={savingKey || !customKey}
-                    onClick={handleSaveKey}
-                    className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 rounded-xl text-xs font-extrabold shadow-md shadow-emerald-500/20 disabled:opacity-40 transition-all flex items-center justify-center space-x-1.5"
-                  >
-                    <Key className="w-3.5 h-3.5" />
-                    <span>{savingKey ? 'Activating...' : 'Activate Key'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSimulateConnect}
-                    className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1"
-                    title="Simulate connection for instant catalog testing without an API key"
-                  >
-                    <span>⚡ Instant Demo Test</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-1">
-                <div className="flex items-center space-x-2 text-slate-300">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>
-                    API Key configured ({aiStatus?.maskedApiKey || 'sk-...active'}). All product photo scans will be processed with <strong>GPT-4o Vision</strong>.
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newKey = prompt('Enter your new OpenAI API key (sk-...):');
-                      if (newKey && newKey.trim().startsWith('sk-')) {
-                        setCustomKey(newKey.trim());
-                        handleSaveKey();
-                      }
-                    }}
-                    className="text-[11px] text-teal-300 hover:text-teal-200 font-semibold underline"
-                  >
-                    Update Key
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDisconnect}
-                    className="text-[11px] text-red-300 hover:text-red-200 font-semibold underline"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            )}
+            </div>
+
+            {/* Instant Demo Sandbox Option */}
+            <div className="pt-2 flex items-center justify-between text-xs border-t border-slate-800">
+              <span className="text-[11px] text-slate-400">
+                Want to test catalog generation without providing any API key?
+              </span>
+              <button
+                type="button"
+                onClick={handleSimulateConnect}
+                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+                title="Simulate connection for instant catalog testing without an API key"
+              >
+                <span>⚡ Instant Demo Test</span>
+              </button>
+            </div>
           </div>
 
           {/* Store Info */}

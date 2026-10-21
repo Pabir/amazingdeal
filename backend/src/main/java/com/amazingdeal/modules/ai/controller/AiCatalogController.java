@@ -79,7 +79,7 @@ public class AiCatalogController {
     }
 
     /**
-     * Saves merchant's personal OpenAI API Key (BYOK alternative for users without ChatGPT Plus).
+     * Saves merchant's personal OpenAI API Key or auto-detects Google Gemini key.
      */
     @PostMapping("/chatgpt/custom-api-key")
     public ResponseEntity<ChatGptStatusResponse> saveCustomApiKey(@Valid @RequestBody CustomApiKeyRequest request) {
@@ -87,7 +87,53 @@ public class AiCatalogController {
         if (tenantId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        ChatGptStatusResponse status = chatGptOAuthService.saveCustomApiKey(tenantId, request.getApiKey());
+        String key = request.getApiKey().trim();
+        // Smart auto-detection if merchant pastes a Gemini key into the generic key field
+        if (key.startsWith("AIza") || "GEMINI".equalsIgnoreCase(request.getProvider())) {
+            ChatGptStatusResponse status = chatGptOAuthService.saveCustomGeminiApiKey(tenantId, key);
+            return ResponseEntity.ok(status);
+        }
+        ChatGptStatusResponse status = chatGptOAuthService.saveCustomApiKey(tenantId, key);
+        return ResponseEntity.ok(status);
+    }
+
+    /**
+     * Saves merchant's Google Gemini API Key.
+     */
+    @PostMapping("/gemini/custom-api-key")
+    public ResponseEntity<ChatGptStatusResponse> saveGeminiApiKey(@Valid @RequestBody CustomApiKeyRequest request) {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        ChatGptStatusResponse status = chatGptOAuthService.saveCustomGeminiApiKey(tenantId, request.getApiKey().trim());
+        return ResponseEntity.ok(status);
+    }
+
+    /**
+     * Disconnects Google Gemini API Key.
+     */
+    @PostMapping("/gemini/disconnect")
+    public ResponseEntity<ChatGptStatusResponse> disconnectGemini() {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        ChatGptStatusResponse status = chatGptOAuthService.disconnectGemini(tenantId);
+        return ResponseEntity.ok(status);
+    }
+
+    /**
+     * Updates preferred AI provider ("AUTO", "GEMINI", "OPENAI").
+     */
+    @PostMapping("/provider-preference")
+    public ResponseEntity<ChatGptStatusResponse> setProviderPreference(@RequestBody Map<String, String> body) {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String pref = body.getOrDefault("preference", "AUTO");
+        ChatGptStatusResponse status = chatGptOAuthService.setAiProviderPreference(tenantId, pref);
         return ResponseEntity.ok(status);
     }
 

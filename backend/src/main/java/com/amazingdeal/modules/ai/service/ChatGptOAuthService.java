@@ -184,7 +184,52 @@ public class ChatGptOAuthService {
     }
 
     /**
-     * Disconnects ChatGPT account and clears all stored tokens.
+     * Binds a merchant's Google Gemini API key (supports Jio/Google Free Tier).
+     */
+    @Transactional
+    public ChatGptStatusResponse saveCustomGeminiApiKey(UUID tenantId, String apiKey) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseGet(() -> createDemoTenantIfMissing(tenantId));
+
+        tenant.setCustomGeminiApiKey(aesCryptoUtil.encrypt(apiKey.trim()));
+        tenantRepository.save(tenant);
+
+        return getStatus(tenantId);
+    }
+
+    /**
+     * Disconnects Google Gemini API key.
+     */
+    @Transactional
+    public ChatGptStatusResponse disconnectGemini(UUID tenantId) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseGet(() -> createDemoTenantIfMissing(tenantId));
+
+        tenant.setCustomGeminiApiKey(null);
+        tenantRepository.save(tenant);
+
+        return getStatus(tenantId);
+    }
+
+    /**
+     * Updates AI provider preference (AUTO, GEMINI, OPENAI).
+     */
+    @Transactional
+    public ChatGptStatusResponse setAiProviderPreference(UUID tenantId, String preference) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseGet(() -> createDemoTenantIfMissing(tenantId));
+
+        String sanitized = (preference != null && (preference.equalsIgnoreCase("GEMINI") || preference.equalsIgnoreCase("OPENAI")))
+                ? preference.toUpperCase()
+                : "AUTO";
+        tenant.setAiProviderPreference(sanitized);
+        tenantRepository.save(tenant);
+
+        return getStatus(tenantId);
+    }
+
+    /**
+     * Disconnects ChatGPT account and clears all stored OpenAI tokens.
      */
     @Transactional
     public ChatGptStatusResponse disconnect(UUID tenantId) {
@@ -204,7 +249,7 @@ public class ChatGptOAuthService {
     }
 
     /**
-     * Retrieves current AI/ChatGPT status for the merchant.
+     * Retrieves current AI status (OpenAI + Google Gemini) for the merchant.
      */
     @Transactional(readOnly = true)
     public ChatGptStatusResponse getStatus(UUID tenantId) {
@@ -213,6 +258,9 @@ public class ChatGptOAuthService {
             return ChatGptStatusResponse.builder()
                     .connected(false)
                     .hasCustomApiKey(false)
+                    .hasCustomGeminiKey(false)
+                    .aiProviderPreference("AUTO")
+                    .activeProvider("DEMO")
                     .connectionType("DISCONNECTED")
                     .build();
         }
@@ -220,6 +268,7 @@ public class ChatGptOAuthService {
         Tenant tenant = tenantOpt.get();
         boolean connected = Boolean.TRUE.equals(tenant.getChatgptConnected());
         boolean hasCustomKey = tenant.getCustomOpenaiApiKey() != null && !tenant.getCustomOpenaiApiKey().isBlank();
+        boolean hasCustomGeminiKey = tenant.getCustomGeminiApiKey() != null && !tenant.getCustomGeminiApiKey().isBlank();
 
         String maskedKey = null;
         if (hasCustomKey) {
@@ -233,9 +282,48 @@ public class ChatGptOAuthService {
             } catch (Exception ignored) {}
         }
 
-        String connectionType = connected 
-                ? "CHATGPT_SUBSCRIPTION" 
-                : (hasCustomKey ? "CUSTOM_API_KEY" : "DISCONNECTED");
+        String maskedGeminiKey = null;
+        if (hasCustomGeminiKey) {
+            try {
+                String plain = aesCryptoUtil.decrypt(tenant.getCustomGeminiApiKey());
+                if (plain != null && plain.length() > 8) {
+                    maskedGeminiKey = plain.substring(0, 6) + "..." + plain.substring(plain.length() - 4);
+                } else {
+                    maskedGeminiKey = "AIza...active";
+                }
+            } catch (Exception ignored) {}
+        }
+
+        String pref = tenant.getAiProviderPreference() != null ? tenant.getAiProviderPreference() : "AUTO";
+
+        String activeProvider;
+        if ("GEMINI".equalsIgnoreCase(pref) && hasCustomGeminiKey) {
+            activeProvider = "GEMINI";
+        } else if ("OPENAI".equalsIgnoreCase(pref) && (hasCustomKey || connected)) {
+            activeProvider = "OPENAI";
+        } else {
+            // AUTO: Prefer Gemini if present (free tier!), else OpenAI
+            if (hasCustomGeminiKey) {
+                activeProvider = "GEMINI";
+            } else if (hasCustomKey || connected) {
+                activeProvider = "OPENAI";
+            } else {
+                activeProvider = "DEMO";
+            }
+        }
+
+        String connectionType;
+        if (hasCustomGeminiKey && (hasCustomKey || connected)) {
+            connectionType = "GEMINI_AND_OPENAI";
+        } else if (hasCustomGeminiKey) {
+            connectionType = "GEMINI_API_KEY";
+        } else if (connected) {
+            connectionType = "CHATGPT_SUBSCRIPTION";
+        } else if (hasCustomKey) {
+            connectionType = "CUSTOM_API_KEY";
+        } else {
+            connectionType = "DISCONNECTED";
+        }
 
         return ChatGptStatusResponse.builder()
                 .connected(connected)
@@ -244,12 +332,16 @@ public class ChatGptOAuthService {
                 .expiresAt(tenant.getChatgptTokenExpiresAt())
                 .hasCustomApiKey(hasCustomKey)
                 .maskedApiKey(maskedKey)
+                .hasCustomGeminiKey(hasCustomGeminiKey)
+                .maskedGeminiKey(maskedGeminiKey)
+                .aiProviderPreference(pref)
+                .activeProvider(activeProvider)
                 .connectionType(connectionType)
                 .build();
     }
 
     /**
-     * Retrieves decrypted active Bearer token, automatically refreshing if close to expiry.
+     * Retrieves decrypted active Bearer token for OpenAI, automatically refreshing if needed.
      */
     public String getActiveBearerToken(Tenant tenant) {
         // 1. Check ChatGPT Subscription Access Token
@@ -262,6 +354,16 @@ public class ChatGptOAuthService {
             return aesCryptoUtil.decrypt(tenant.getCustomOpenaiApiKey());
         }
 
+        return null;
+    }
+
+    /**
+     * Retrieves decrypted Google Gemini API key.
+     */
+    public String getActiveGeminiApiKey(Tenant tenant) {
+        if (tenant.getCustomGeminiApiKey() != null && !tenant.getCustomGeminiApiKey().isBlank()) {
+            return aesCryptoUtil.decrypt(tenant.getCustomGeminiApiKey());
+        }
         return null;
     }
 
