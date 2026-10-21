@@ -85,8 +85,6 @@ public class AiCatalogGeneratorService {
     }
 
     private GeneratedProductResponse executeGeminiVisionRequest(String geminiKey, Tenant tenant, GenerateProductFromImageRequest request) {
-        String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
-
         // Extract raw Base64 data and mimeType
         String mimeType = "image/jpeg";
         String base64Data;
