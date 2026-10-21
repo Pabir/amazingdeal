@@ -72,6 +72,21 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
     }
   };
 
+  const handleSimulateConnect = async () => {
+    try {
+      setLoadingStatus(true);
+      setError(null);
+      const res = await ApiService.handleChatGptCallback({
+        code: 'simulated_test_code_' + Date.now(),
+      });
+      setChatGptStatus(res);
+    } catch (e: any) {
+      setError('Simulated connection failed: ' + e.message);
+    } finally {
+      setLoadingStatus(false);
+    }
+  };
+
   const handleSaveCustomKey = async () => {
     if (!customKey.trim().startsWith('sk-')) {
       setError('Please enter a valid OpenAI API key starting with "sk-"');
@@ -235,13 +250,25 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
 
           <div className="flex items-center space-x-2">
             {!chatGptStatus?.connected && (
-              <button
-                onClick={handleSignInWithChatGpt}
-                className="inline-flex items-center space-x-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] shadow-sm transition-all"
-              >
-                <Sparkles className="w-3 h-3" />
-                <span>Sign in with ChatGPT</span>
-              </button>
+              <div className="flex items-center space-x-1.5">
+                <button
+                  type="button"
+                  onClick={handleSignInWithChatGpt}
+                  className="inline-flex items-center space-x-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] shadow-sm transition-all"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>Sign in with ChatGPT</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSimulateConnect}
+                  className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-lg font-bold text-[11px] transition-all"
+                  title="Simulate ChatGPT Plus connection for testing"
+                >
+                  ⚡ Instant Demo Connect
+                </button>
+              </div>
             )}
             <button
               onClick={() => setShowKeyInput(!showKeyInput)}

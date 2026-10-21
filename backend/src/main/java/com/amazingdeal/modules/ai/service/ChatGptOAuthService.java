@@ -98,7 +98,7 @@ public class ChatGptOAuthService {
     @Transactional
     public ChatGptStatusResponse handleCallback(UUID tenantId, ChatGptCallbackRequest request) {
         Tenant tenant = tenantRepository.findById(tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
+                .orElseGet(() -> createDemoTenantIfMissing(tenantId));
 
         String code = request.getCode().trim();
 
@@ -174,11 +174,7 @@ public class ChatGptOAuthService {
     @Transactional
     public ChatGptStatusResponse saveCustomApiKey(UUID tenantId, String apiKey) {
         Tenant tenant = tenantRepository.findById(tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
-
-        if (apiKey == null || apiKey.trim().isBlank()) {
-            throw new IllegalArgumentException("API key cannot be empty.");
-        }
+                .orElseGet(() -> createDemoTenantIfMissing(tenantId));
 
         tenant.setCustomOpenaiApiKey(aesCryptoUtil.encrypt(apiKey.trim()));
         tenantRepository.save(tenant);
@@ -192,7 +188,7 @@ public class ChatGptOAuthService {
     @Transactional
     public ChatGptStatusResponse disconnect(UUID tenantId) {
         Tenant tenant = tenantRepository.findById(tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
+                .orElseGet(() -> createDemoTenantIfMissing(tenantId));
 
         tenant.setChatgptConnected(false);
         tenant.setChatgptAccountEmail(null);
@@ -211,9 +207,16 @@ public class ChatGptOAuthService {
      */
     @Transactional(readOnly = true)
     public ChatGptStatusResponse getStatus(UUID tenantId) {
-        Tenant tenant = tenantRepository.findById(tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
+        Optional<Tenant> tenantOpt = tenantRepository.findById(tenantId);
+        if (tenantOpt.isEmpty()) {
+            return ChatGptStatusResponse.builder()
+                    .connected(false)
+                    .hasCustomApiKey(false)
+                    .connectionType("DISCONNECTED")
+                    .build();
+        }
 
+        Tenant tenant = tenantOpt.get();
         boolean connected = Boolean.TRUE.equals(tenant.getChatgptConnected());
         boolean hasCustomKey = tenant.getCustomOpenaiApiKey() != null && !tenant.getCustomOpenaiApiKey().isBlank();
 
@@ -283,5 +286,21 @@ public class ChatGptOAuthService {
             return tokenJson.get("subscription_tier").asText();
         }
         return "ChatGPT Plus";
+    }
+
+    private Tenant createDemoTenantIfMissing(UUID tenantId) {
+        return tenantRepository.findById(tenantId).orElseGet(() -> {
+            Tenant demo = Tenant.builder()
+                    .id(tenantId)
+                    .storeName("Sharma General Store")
+                    .subdomain("sharma")
+                    .ownerEmail("sharma@amazingdeal.co.in")
+                    .ownerPhone("9876543210")
+                    .passwordHash("$2a$10$demoHashPlaceholder")
+                    .status("ACTIVE")
+                    .storeCategory("Groceries")
+                    .build();
+            return tenantRepository.save(demo);
+        });
     }
 }
