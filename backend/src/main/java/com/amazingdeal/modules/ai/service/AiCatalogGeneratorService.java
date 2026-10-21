@@ -94,7 +94,7 @@ public class AiCatalogGeneratorService {
     }
 
     private GeneratedProductResponse executeGeminiVisionRequest(String geminiKey, Tenant tenant, GenerateProductFromImageRequest request) {
-        String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiKey;
+        String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
         // Extract raw Base64 data and mimeType
         String mimeType = "image/jpeg";
@@ -162,6 +162,7 @@ public class AiCatalogGeneratorService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-goog-api-key", geminiKey);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
 
         ResponseEntity<String> response;
@@ -216,7 +217,7 @@ public class AiCatalogGeneratorService {
                         .estimatedUnit(productJson.path("estimatedUnit").asText("1 Unit"))
                         .inventoryQuantity(productJson.path("inventoryQuantity").asInt(50))
                         .imageUrl(displayImg)
-                        .poweredBy("Google Gemini 1.5 Flash (Free Tier / Jio 5G)")
+                        .poweredBy("Google Gemini Flash (Free Tier / Jio 5G)")
                         .build();
             } catch (Exception e) {
                 log.error("Failed to parse Gemini response: {}", e.getMessage());

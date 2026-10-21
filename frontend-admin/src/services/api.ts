@@ -97,8 +97,12 @@ export class ApiService {
 
       return (await response.json()) as T;
     } catch (err: any) {
-      console.warn(`API call ${endpoint} failed:`, err.message);
-      throw err;
+      let msg = err.message || 'Request failed';
+      if (msg === 'Failed to fetch') {
+        msg = 'Connection to server interrupted. Please check your network connection or try again in a moment.';
+      }
+      console.warn(`API call ${endpoint} failed:`, msg);
+      throw new Error(msg);
     }
   }
 

@@ -127,10 +127,43 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      const result = reader.result as string;
-      setBase64Image(result);
-      setImagePreview(result);
-      setImageUrl('');
+      const rawBase64 = reader.result as string;
+      // Auto-compress large phone photos to max 1200px to ensure instant, reliable upload with no network timeouts
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1200;
+        let { width, height } = img;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.85);
+          setBase64Image(compressed);
+          setImagePreview(compressed);
+          setImageUrl('');
+          return;
+        }
+        setBase64Image(rawBase64);
+        setImagePreview(rawBase64);
+        setImageUrl('');
+      };
+      img.onerror = () => {
+        setBase64Image(rawBase64);
+        setImagePreview(rawBase64);
+        setImageUrl('');
+      };
+      img.src = rawBase64;
     };
     reader.readAsDataURL(file);
   };
