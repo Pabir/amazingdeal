@@ -193,6 +193,32 @@ public class AiCatalogController {
         }
     }
 
+    /**
+     * AI Studio Photo Enhancer:
+     * Executes commercial studio image commands such as /360, /studio, /podium, /lifestyle, /macro
+     * to produce photorealistic multi-angle product frames and showroom presentation.
+     */
+    @PostMapping("/enhance-photo")
+    public ResponseEntity<?> enhancePhoto(@RequestBody AiPhotoEnhanceRequest request) {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Unauthorized tenant context"));
+        }
+
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseGet(() -> createDemoTenantIfMissing(tenantId));
+
+        try {
+            AiPhotoEnhanceResponse response = aiCatalogGeneratorService.enhanceProductPhoto(tenant, request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Failed to enhance photo with AI studio: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "error", "Failed to enhance photo: " + e.getMessage()
+            ));
+        }
+    }
+
     private Tenant createDemoTenantIfMissing(UUID tenantId) {
         return tenantRepository.findById(tenantId).orElseGet(() -> {
             Tenant demo = Tenant.builder()

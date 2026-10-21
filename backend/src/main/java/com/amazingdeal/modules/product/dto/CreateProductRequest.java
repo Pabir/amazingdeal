@@ -27,6 +27,8 @@ public class CreateProductRequest {
 
     private String imageUrl;
 
+    private String imagesJson;
+
     private String category;
 
     private String status; // ACTIVE, OUT_OF_STOCK, DRAFT

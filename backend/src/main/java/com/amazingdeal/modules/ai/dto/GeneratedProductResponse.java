@@ -23,6 +23,8 @@ public class GeneratedProductResponse {
     private String ingredientsOrSpecs;
     private String estimatedUnit;
     private String imageUrl;
+    private String imagesJson;
+    private List<AiPhotoAngle> angles;
     private Integer inventoryQuantity;
     private String poweredBy; // e.g. "ChatGPT Plus (merchant@example.com)"
 }

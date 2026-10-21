@@ -45,6 +45,7 @@ public class ProductService {
                 .inventoryQuantity(request.getInventoryQuantity() != null ? request.getInventoryQuantity() : 100)
                 .tracksInventory(request.getTracksInventory() != null ? request.getTracksInventory() : false)
                 .imageUrl(request.getImageUrl())
+                .imagesJson(request.getImagesJson())
                 .category(request.getCategory() != null ? request.getCategory() : "General")
                 .status(request.getStatus() != null ? request.getStatus() : "ACTIVE")
                 .build();
@@ -66,6 +67,7 @@ public class ProductService {
         if (request.getInventoryQuantity() != null) product.setInventoryQuantity(request.getInventoryQuantity());
         if (request.getTracksInventory() != null) product.setTracksInventory(request.getTracksInventory());
         if (request.getImageUrl() != null) product.setImageUrl(request.getImageUrl());
+        if (request.getImagesJson() != null) product.setImagesJson(request.getImagesJson());
         if (request.getCategory() != null) product.setCategory(request.getCategory());
         if (request.getStatus() != null) product.setStatus(request.getStatus());
 
