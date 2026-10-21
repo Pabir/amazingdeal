@@ -109,13 +109,18 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
   };
 
   const handleSaveGeminiKey = async () => {
-    if (!geminiKey.trim().startsWith('AIza')) {
-      alert('Please enter a valid Google Gemini key starting with "AIza..."');
+    const key = geminiKey.trim();
+    if (!key) {
+      alert('Please enter your Google Gemini API key.');
+      return;
+    }
+    if (key.startsWith('sk-')) {
+      alert('This looks like an OpenAI key (starts with sk-). Please paste it into the OpenAI card instead.');
       return;
     }
     try {
       setSavingGeminiKey(true);
-      const res = await ApiService.saveCustomGeminiApiKey(geminiKey.trim());
+      const res = await ApiService.saveCustomGeminiApiKey(key);
       setAiStatus(res);
       setGeminiKey('');
       setAiMessage('✨ Google Gemini API key saved & activated!');
@@ -332,8 +337,8 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                       <button
                         type="button"
                         onClick={() => {
-                          const newKey = prompt('Enter your new Google Gemini API key (AIza...):');
-                          if (newKey && newKey.trim().startsWith('AIza')) {
+                          const newKey = prompt('Enter your new Google Gemini API key (AQ... or AIza...):');
+                          if (newKey && newKey.trim() && !newKey.trim().startsWith('sk-')) {
                             setGeminiKey(newKey.trim());
                             handleSaveGeminiKey();
                           }
@@ -356,7 +361,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                     <div className="flex items-center gap-2">
                       <input
                         type="password"
-                        placeholder="Paste Gemini Key (AIza...)"
+                        placeholder="Paste Gemini Key (AQ... or AIza...)"
                         value={geminiKey}
                         onChange={(e) => setGeminiKey(e.target.value)}
                         className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-blue-400"

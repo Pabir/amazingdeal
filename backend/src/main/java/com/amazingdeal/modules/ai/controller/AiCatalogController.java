@@ -88,8 +88,8 @@ public class AiCatalogController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         String key = request.getApiKey().trim();
-        // Smart auto-detection if merchant pastes a Gemini key into the generic key field
-        if (key.startsWith("AIza") || "GEMINI".equalsIgnoreCase(request.getProvider())) {
+        // Smart auto-detection if merchant pastes a Gemini key (AIza... or new Google AI Studio AQ....) into the generic key field
+        if (key.startsWith("AIza") || key.startsWith("AQ.") || "GEMINI".equalsIgnoreCase(request.getProvider()) || !key.startsWith("sk-")) {
             ChatGptStatusResponse status = chatGptOAuthService.saveCustomGeminiApiKey(tenantId, key);
             return ResponseEntity.ok(status);
         }

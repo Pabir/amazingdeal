@@ -90,7 +90,7 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
   const handleSaveCustomKey = async () => {
     const key = customKey.trim();
     if (!key) {
-      setError('Please enter your Google Gemini (AIza...) or OpenAI (sk-...) API key.');
+      setError('Please enter your Google Gemini (AQ... or AIza...) or OpenAI (sk-...) API key.');
       return;
     }
 
@@ -99,12 +99,14 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
       setError(null);
       let updated: ChatGptStatus;
 
-      if (key.startsWith('AIza')) {
-        updated = await ApiService.saveCustomGeminiApiKey(key);
-      } else if (key.startsWith('sk-')) {
+      if (key.startsWith('sk-')) {
+        // OpenAI Key
         updated = await ApiService.saveCustomApiKey(key);
+      } else if (key.startsWith('AIza') || key.startsWith('AQ.') || key.length >= 20) {
+        // Google Gemini Key (supports both legacy AIza... and new Google AI Studio AQ.... authorization keys)
+        updated = await ApiService.saveCustomGeminiApiKey(key);
       } else {
-        setError('Unrecognized key prefix. Google Gemini keys start with "AIza..." and OpenAI keys start with "sk-..."');
+        setError('Unrecognized key prefix. Google Gemini keys start with "AQ." or "AIza...", and OpenAI keys start with "sk-..."');
         setSavingKey(false);
         return;
       }
@@ -312,7 +314,7 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
               <div className="flex items-center space-x-2 font-bold text-amber-900">
                 <Key className="w-3.5 h-3.5" />
                 <span>AI Vision API Key:</span>
-                {customKey.trim().startsWith('AIza') && (
+                {(customKey.trim().startsWith('AIza') || customKey.trim().startsWith('AQ.') || (!customKey.trim().startsWith('sk-') && customKey.trim().length >= 20)) && (
                   <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold">
                     Detected: Google Gemini
                   </span>
@@ -347,7 +349,7 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
             <div className="flex items-center gap-2">
               <input
                 type="password"
-                placeholder="Paste Gemini (AIza...) or OpenAI (sk-...) key here"
+                placeholder="Paste Gemini (AQ... or AIza...) or OpenAI (sk-...) key here"
                 value={customKey}
                 onChange={(e) => setCustomKey(e.target.value)}
                 className="flex-1 min-w-[200px] px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-amber-500"
@@ -361,7 +363,7 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
               </button>
             </div>
             <p className="text-[11px] text-slate-500">
-              💡 <strong>Pro-Tip:</strong> Jio 5G users and all Google account holders can generate a 100% free API key from Google AI Studio with no credit card required.
+              💡 <strong>Pro-Tip:</strong> Google AI Studio keys start with "AQ." or "AIza...". Jio 5G users and all Google account holders can generate a 100% free key with no credit card required.
             </p>
           </div>
         )}

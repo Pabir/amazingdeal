@@ -120,6 +120,14 @@ class NeonDatabaseConnectionTest {
         assertEquals("GEMINI", status.getActiveProvider());
         System.out.println(">>> Successfully verified Gemini API key saving & masking: " + status.getMaskedGeminiKey());
 
+        // Test new Google AI Studio authorization key format starting with "AQ."
+        String aqKey = "AQ.TestDummyKey1234567890abcdefghijklmnopqrstuv9999";
+        var aqStatus = chatGptOAuthService.saveCustomGeminiApiKey(tenant.getId(), aqKey);
+        assertNotNull(aqStatus);
+        assertTrue(aqStatus.isHasCustomGeminiKey());
+        assertEquals("AQ.Tes...9999", aqStatus.getMaskedGeminiKey());
+        System.out.println(">>> Successfully verified AQ. Gemini key saving & masking: " + aqStatus.getMaskedGeminiKey());
+
         // Test disconnect
         var disconnected = chatGptOAuthService.disconnectGemini(tenant.getId());
         assertFalse(disconnected.isHasCustomGeminiKey());
