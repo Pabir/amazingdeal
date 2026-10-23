@@ -196,6 +196,15 @@ export function App() {
       })
       .catch((e) => console.warn('Could not refresh full tenant profile:', e.message));
 
+    // Pre-warm AI status cache in background so AI Studio opens instantly with zero lag
+    ApiService.getChatGptStatus()
+      .then((status) => {
+        try {
+          localStorage.setItem('ad_ai_status_cache', JSON.stringify(status));
+        } catch {}
+      })
+      .catch(() => {});
+
     loadData();
 
     // Live order polling every 12 seconds

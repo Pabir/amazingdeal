@@ -20,7 +20,13 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
   onProductCreated,
   categories,
 }) => {
-  const [chatGptStatus, setChatGptStatus] = useState<ChatGptStatus | null>(null);
+  const [chatGptStatus, setChatGptStatus] = useState<ChatGptStatus | null>(() => {
+    try {
+      const cached = localStorage.getItem('ad_ai_status_cache');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return null;
+  });
   const [loadingStatus, setLoadingStatus] = useState(false);
 
   // Scan state
@@ -46,10 +52,14 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
   const [activeCommandBadge, setActiveCommandBadge] = useState<string>('/360');
   const [studioStyleName, setStudioStyleName] = useState<string>('360° Multi-Angle Turnaround Studio');
 
-  // Separate API Key Inputs for Gemini and OpenAI
+  // Separate API Key Inputs for Gemini and OpenAI (persisted in localStorage)
   const [showKeyInput, setShowKeyInput] = useState(false);
-  const [geminiKeyInput, setGeminiKeyInput] = useState('');
-  const [openaiKeyInput, setOpenaiKeyInput] = useState('');
+  const [geminiKeyInput, setGeminiKeyInput] = useState<string>(() => {
+    return localStorage.getItem('ad_custom_gemini_key') || '';
+  });
+  const [openaiKeyInput, setOpenaiKeyInput] = useState<string>(() => {
+    return localStorage.getItem('ad_custom_openai_key') || '';
+  });
   const [savingGemini, setSavingGemini] = useState(false);
   const [savingOpenAi, setSavingOpenAi] = useState(false);
 
@@ -65,8 +75,50 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
       setLoadingStatus(true);
       const res = await ApiService.getChatGptStatus();
       setChatGptStatus(res);
+      try {
+        localStorage.setItem('ad_ai_status_cache', JSON.stringify(res));
+      } catch {}
+
+      // Auto-sync stored Gemini key to server if server doesn't have it yet
+      const storedGemini = localStorage.getItem('ad_custom_gemini_key');
+      if (!res.hasCustomGeminiKey && storedGemini && storedGemini.trim().length > 10) {
+        try {
+          const synced = await ApiService.saveCustomGeminiApiKey(storedGemini.trim());
+          setChatGptStatus(synced);
+          localStorage.setItem('ad_ai_status_cache', JSON.stringify(synced));
+        } catch (syncErr) {
+          console.warn('Auto-syncing Gemini key to server:', syncErr);
+        }
+      }
+
+      // Auto-sync stored OpenAI key to server if server doesn't have it yet
+      const storedOpenAi = localStorage.getItem('ad_custom_openai_key');
+      if (!res.hasCustomApiKey && !res.connected && storedOpenAi && storedOpenAi.trim().length > 10) {
+        try {
+          const synced = await ApiService.saveCustomOpenAiApiKey(storedOpenAi.trim());
+          setChatGptStatus(synced);
+          localStorage.setItem('ad_ai_status_cache', JSON.stringify(synced));
+        } catch (syncErr) {
+          console.warn('Auto-syncing OpenAI key to server:', syncErr);
+        }
+      }
     } catch (e: any) {
-      console.warn('Could not load AI status:', e);
+      console.warn('Could not load AI status from server:', e);
+      // Resilient fallback: Synthesize status from localStorage so merchant is never blocked
+      const storedGemini = localStorage.getItem('ad_custom_gemini_key');
+      const storedOpenAi = localStorage.getItem('ad_custom_openai_key');
+      if (storedGemini || storedOpenAi) {
+        setChatGptStatus((prev) => prev || {
+          connected: false,
+          hasCustomApiKey: !!storedOpenAi,
+          maskedApiKey: storedOpenAi ? 'sk-...' + storedOpenAi.slice(-4) : undefined,
+          hasCustomGeminiKey: !!storedGemini,
+          maskedGeminiKey: storedGemini ? (storedGemini.slice(0, 6) + '...' + storedGemini.slice(-4)) : undefined,
+          aiProviderPreference: storedGemini ? 'GEMINI' : 'OPENAI',
+          activeProvider: storedGemini ? 'GEMINI' : 'OPENAI',
+          connectionType: storedGemini ? 'GEMINI_API_KEY' : 'CUSTOM_API_KEY',
+        });
+      }
     } finally {
       setLoadingStatus(false);
     }
@@ -94,6 +146,7 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
         code: 'simulated_test_code_' + Date.now(),
       });
       setChatGptStatus(res);
+      localStorage.setItem('ad_ai_status_cache', JSON.stringify(res));
     } catch (e: any) {
       setError('Simulated connection failed: ' + e.message);
     } finally {
@@ -132,9 +185,13 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
     try {
       setSavingGemini(true);
       setError(null);
+      // 1. Immediately store in localStorage so it is never lost on refresh or modal close
+      localStorage.setItem('ad_custom_gemini_key', key);
+      
       const updated = await ApiService.saveCustomGeminiApiKey(key);
       setChatGptStatus(updated);
-      setGeminiKeyInput('');
+      localStorage.setItem('ad_ai_status_cache', JSON.stringify(updated));
+      setShowKeyInput(false);
     } catch (e: any) {
       setError('Failed to save Google Gemini key: ' + e.message);
     } finally {
@@ -169,9 +226,13 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
     try {
       setSavingOpenAi(true);
       setError(null);
+      // 1. Immediately store in localStorage so it is never lost
+      localStorage.setItem('ad_custom_openai_key', key);
+
       const updated = await ApiService.saveCustomOpenAiApiKey(key);
       setChatGptStatus(updated);
-      setOpenaiKeyInput('');
+      localStorage.setItem('ad_ai_status_cache', JSON.stringify(updated));
+      setShowKeyInput(false);
     } catch (e: any) {
       setError('Failed to save OpenAI key: ' + e.message);
     } finally {
@@ -183,8 +244,11 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
     try {
       setLoadingStatus(true);
       setError(null);
+      localStorage.removeItem('ad_custom_gemini_key');
       const updated = await ApiService.disconnectGemini();
       setChatGptStatus(updated);
+      localStorage.setItem('ad_ai_status_cache', JSON.stringify(updated));
+      setGeminiKeyInput('');
     } catch (e: any) {
       setError('Failed to disconnect Gemini: ' + e.message);
     } finally {
@@ -196,8 +260,11 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
     try {
       setLoadingStatus(true);
       setError(null);
+      localStorage.removeItem('ad_custom_openai_key');
       const updated = await ApiService.disconnectOpenAi();
       setChatGptStatus(updated);
+      localStorage.setItem('ad_ai_status_cache', JSON.stringify(updated));
+      setOpenaiKeyInput('');
     } catch (e: any) {
       setError('Failed to disconnect OpenAI: ' + e.message);
     } finally {
@@ -334,13 +401,60 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
       return;
     }
 
-    if (engine === 'GEMINI' && !chatGptStatus?.hasCustomGeminiKey) {
+    // 1. If status is still loading from server, wait up to 1.5s for loadStatus to finish
+    if (loadingStatus && !chatGptStatus) {
+      try {
+        const fresh = await ApiService.getChatGptStatus();
+        setChatGptStatus(fresh);
+        localStorage.setItem('ad_ai_status_cache', JSON.stringify(fresh));
+      } catch {}
+    }
+
+    let currentStatus = chatGptStatus;
+
+    // 2. AUTO-SAVE & ACTIVATION: If user entered or has a Gemini key in input or localStorage, ensure it is saved & active!
+    const effectiveGeminiKey = (geminiKeyInput.trim() || localStorage.getItem('ad_custom_gemini_key') || '').replace(/['"]/g, '');
+    if (engine === 'GEMINI' && !currentStatus?.hasCustomGeminiKey && effectiveGeminiKey) {
+      try {
+        setSavingGemini(true);
+        const updated = await ApiService.saveCustomGeminiApiKey(effectiveGeminiKey);
+        currentStatus = updated;
+        setChatGptStatus(updated);
+        localStorage.setItem('ad_custom_gemini_key', effectiveGeminiKey);
+        localStorage.setItem('ad_ai_status_cache', JSON.stringify(updated));
+        setShowKeyInput(false);
+      } catch (saveErr: any) {
+        console.warn('Auto-save of Gemini key failed:', saveErr);
+      } finally {
+        setSavingGemini(false);
+      }
+    }
+
+    // 3. AUTO-SAVE & ACTIVATION: If user entered or has an OpenAI key in input or localStorage, ensure it is saved & active!
+    const effectiveOpenAiKey = (openaiKeyInput.trim() || localStorage.getItem('ad_custom_openai_key') || '').replace(/['"]/g, '');
+    if (engine === 'OPENAI' && !currentStatus?.hasCustomApiKey && !currentStatus?.connected && effectiveOpenAiKey) {
+      try {
+        setSavingOpenAi(true);
+        const updated = await ApiService.saveCustomOpenAiApiKey(effectiveOpenAiKey);
+        currentStatus = updated;
+        setChatGptStatus(updated);
+        localStorage.setItem('ad_custom_openai_key', effectiveOpenAiKey);
+        localStorage.setItem('ad_ai_status_cache', JSON.stringify(updated));
+        setShowKeyInput(false);
+      } catch (saveErr: any) {
+        console.warn('Auto-save of OpenAI key failed:', saveErr);
+      } finally {
+        setSavingOpenAi(false);
+      }
+    }
+
+    if (engine === 'GEMINI' && !currentStatus?.hasCustomGeminiKey && !effectiveGeminiKey) {
       setShowKeyInput(true);
       setError('Please enter your free Google Gemini API key below to generate with Gemini.');
       return;
     }
 
-    if (engine === 'OPENAI' && !chatGptStatus?.hasCustomApiKey && !chatGptStatus?.connected) {
+    if (engine === 'OPENAI' && !currentStatus?.hasCustomApiKey && !currentStatus?.connected && !effectiveOpenAiKey) {
       setShowKeyInput(true);
       setError('Please enter your OpenAI API key below to generate with OpenAI.');
       return;
@@ -358,6 +472,7 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
         additionalMerchantNotes: notes || undefined,
         simulateDemo: engine === 'DEMO',
         provider: engine === 'DEMO' ? undefined : engine,
+        apiKey: engine === 'GEMINI' ? effectiveGeminiKey : (engine === 'OPENAI' ? effectiveOpenAiKey : undefined),
       });
 
       setGeneratedDraft(res);

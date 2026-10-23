@@ -16,4 +16,5 @@ public class GenerateProductFromImageRequest {
     private String additionalMerchantNotes;
     private boolean simulateDemo; // Allows test mode without real OpenAI keys
     private String provider; // "GEMINI", "OPENAI", "AUTO"
+    private String apiKey; // Optional client-supplied API key for instant generation and auto-save fallback
 }

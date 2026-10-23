@@ -177,6 +177,23 @@ public class AiCatalogController {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseGet(() -> createDemoTenantIfMissing(tenantId));
 
+        if (request.getApiKey() != null && !request.getApiKey().isBlank()) {
+            String passedKey = request.getApiKey().trim();
+            if (passedKey.startsWith("AQ.") || passedKey.startsWith("AIza") || "GEMINI".equalsIgnoreCase(request.getProvider())) {
+                if (tenant.getCustomGeminiApiKey() == null || tenant.getCustomGeminiApiKey().isBlank()) {
+                    log.info("Auto-saving supplied Gemini API key to tenant {} from generation request", tenant.getSubdomain());
+                    chatGptOAuthService.saveCustomGeminiApiKey(tenant.getId(), passedKey);
+                    tenant = tenantRepository.findById(tenantId).orElse(tenant);
+                }
+            } else if (passedKey.startsWith("sk-") || "OPENAI".equalsIgnoreCase(request.getProvider())) {
+                if (tenant.getCustomOpenaiApiKey() == null || tenant.getCustomOpenaiApiKey().isBlank()) {
+                    log.info("Auto-saving supplied OpenAI API key to tenant {} from generation request", tenant.getSubdomain());
+                    chatGptOAuthService.saveCustomApiKey(tenant.getId(), passedKey);
+                    tenant = tenantRepository.findById(tenantId).orElse(tenant);
+                }
+            }
+        }
+
         try {
             GeneratedProductResponse response = aiCatalogGeneratorService.generateProductFromImage(tenant, request);
             return ResponseEntity.ok(response);

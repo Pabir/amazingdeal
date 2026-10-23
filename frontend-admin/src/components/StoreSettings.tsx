@@ -20,10 +20,16 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   // AI & Multi-Provider State
-  const [aiStatus, setAiStatus] = useState<ChatGptStatus | null>(null);
+  const [aiStatus, setAiStatus] = useState<ChatGptStatus | null>(() => {
+    try {
+      const cached = localStorage.getItem('ad_ai_status_cache');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return null;
+  });
   const [aiLoading, setAiLoading] = useState(false);
-  const [customKey, setCustomKey] = useState('');
-  const [geminiKey, setGeminiKey] = useState('');
+  const [customKey, setCustomKey] = useState<string>(() => localStorage.getItem('ad_custom_openai_key') || '');
+  const [geminiKey, setGeminiKey] = useState<string>(() => localStorage.getItem('ad_custom_gemini_key') || '');
   const [savingKey, setSavingKey] = useState(false);
   const [savingGeminiKey, setSavingGeminiKey] = useState(false);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
@@ -37,6 +43,29 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
       setAiLoading(true);
       const res = await ApiService.getChatGptStatus();
       setAiStatus(res);
+      try {
+        localStorage.setItem('ad_ai_status_cache', JSON.stringify(res));
+      } catch {}
+
+      // Auto-sync stored Gemini key if server has none
+      const storedGemini = localStorage.getItem('ad_custom_gemini_key');
+      if (!res.hasCustomGeminiKey && storedGemini && storedGemini.trim().length > 10) {
+        try {
+          const synced = await ApiService.saveCustomGeminiApiKey(storedGemini.trim());
+          setAiStatus(synced);
+          localStorage.setItem('ad_ai_status_cache', JSON.stringify(synced));
+        } catch {}
+      }
+
+      // Auto-sync stored OpenAI key if server has none
+      const storedOpenAi = localStorage.getItem('ad_custom_openai_key');
+      if (!res.hasCustomApiKey && !res.connected && storedOpenAi && storedOpenAi.trim().length > 10) {
+        try {
+          const synced = await ApiService.saveCustomApiKey(storedOpenAi.trim());
+          setAiStatus(synced);
+          localStorage.setItem('ad_ai_status_cache', JSON.stringify(synced));
+        } catch {}
+      }
     } catch (e: any) {
       console.warn('Could not fetch AI status:', e);
     } finally {
@@ -78,8 +107,11 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
     if (!confirm('Are you sure you want to disconnect your OpenAI API key?')) return;
     try {
       setAiLoading(true);
+      localStorage.removeItem('ad_custom_openai_key');
       const res = await ApiService.disconnectChatGpt();
       setAiStatus(res);
+      localStorage.setItem('ad_ai_status_cache', JSON.stringify(res));
+      setCustomKey('');
       setAiMessage('OpenAI key disconnected.');
       setTimeout(() => setAiMessage(null), 3000);
     } catch (e: any) {
@@ -90,15 +122,17 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
   };
 
   const handleSaveKey = async () => {
-    if (!customKey.trim().startsWith('sk-')) {
+    const raw = customKey.trim().replace(/['"]/g, '');
+    if (!raw.startsWith('sk-')) {
       alert('Please enter a valid OpenAI key starting with "sk-"');
       return;
     }
     try {
       setSavingKey(true);
-      const res = await ApiService.saveCustomApiKey(customKey.trim());
+      localStorage.setItem('ad_custom_openai_key', raw);
+      const res = await ApiService.saveCustomApiKey(raw);
       setAiStatus(res);
-      setCustomKey('');
+      localStorage.setItem('ad_ai_status_cache', JSON.stringify(res));
       setAiMessage('OpenAI API key saved successfully!');
       setTimeout(() => setAiMessage(null), 3000);
     } catch (e: any) {
@@ -136,9 +170,10 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
     }
     try {
       setSavingGeminiKey(true);
+      localStorage.setItem('ad_custom_gemini_key', key);
       const res = await ApiService.saveCustomGeminiApiKey(key);
       setAiStatus(res);
-      setGeminiKey('');
+      localStorage.setItem('ad_ai_status_cache', JSON.stringify(res));
       setAiMessage('✨ Google Gemini API key saved & activated!');
       setTimeout(() => setAiMessage(null), 3000);
     } catch (e: any) {
@@ -152,8 +187,11 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
     if (!confirm('Are you sure you want to remove your Google Gemini API key?')) return;
     try {
       setAiLoading(true);
+      localStorage.removeItem('ad_custom_gemini_key');
       const res = await ApiService.disconnectGemini();
       setAiStatus(res);
+      localStorage.setItem('ad_ai_status_cache', JSON.stringify(res));
+      setGeminiKey('');
       setAiMessage('Google Gemini key disconnected.');
       setTimeout(() => setAiMessage(null), 3000);
     } catch (e: any) {

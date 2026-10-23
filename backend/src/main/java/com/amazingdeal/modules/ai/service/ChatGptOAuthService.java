@@ -53,6 +53,12 @@ public class ChatGptOAuthService {
     @Value("${app.openai.chatgpt.token-endpoint:https://auth.openai.com/api/accounts/oauth/token}")
     private String tokenEndpoint;
 
+    @Value("${app.gemini.api-key:${GEMINI_API_KEY:}}")
+    private String systemGeminiApiKey;
+
+    @Value("${app.openai.api-key:${OPENAI_API_KEY:}}")
+    private String systemOpenaiApiKey;
+
     /**
      * Generates standard OAuth 2.0 PKCE Authorization URL for "Sign in with ChatGPT".
      */
@@ -210,9 +216,8 @@ public class ChatGptOAuthService {
 
         String sanitized = sanitizeApiKey(apiKey);
         tenant.setCustomOpenaiApiKey(sanitized != null ? aesCryptoUtil.encrypt(sanitized) : null);
-        tenantRepository.save(tenant);
-
-        return getStatus(tenantId);
+        tenantRepository.saveAndFlush(tenant);
+        return getStatus(tenant.getId());
     }
 
     /**
@@ -225,9 +230,9 @@ public class ChatGptOAuthService {
 
         String sanitized = sanitizeApiKey(apiKey);
         tenant.setCustomGeminiApiKey(sanitized != null ? aesCryptoUtil.encrypt(sanitized) : null);
-        tenantRepository.save(tenant);
+        tenantRepository.saveAndFlush(tenant);
 
-        return getStatus(tenantId);
+        return getStatus(tenant.getId());
     }
 
     /**
@@ -239,9 +244,9 @@ public class ChatGptOAuthService {
                 .orElseGet(() -> createDemoTenantIfMissing(tenantId));
 
         tenant.setCustomGeminiApiKey(null);
-        tenantRepository.save(tenant);
+        tenantRepository.saveAndFlush(tenant);
 
-        return getStatus(tenantId);
+        return getStatus(tenant.getId());
     }
 
     /**
@@ -256,9 +261,9 @@ public class ChatGptOAuthService {
                 ? preference.toUpperCase()
                 : "AUTO";
         tenant.setAiProviderPreference(sanitized);
-        tenantRepository.save(tenant);
+        tenantRepository.saveAndFlush(tenant);
 
-        return getStatus(tenantId);
+        return getStatus(tenant.getId());
     }
 
     /**
@@ -277,8 +282,8 @@ public class ChatGptOAuthService {
         tenant.setChatgptTokenExpiresAt(null);
         tenant.setCustomOpenaiApiKey(null);
 
-        tenantRepository.save(tenant);
-        return getStatus(tenantId);
+        tenantRepository.saveAndFlush(tenant);
+        return getStatus(tenant.getId());
     }
 
     /**
@@ -287,24 +292,35 @@ public class ChatGptOAuthService {
     @Transactional(readOnly = true)
     public ChatGptStatusResponse getStatus(UUID tenantId) {
         Optional<Tenant> tenantOpt = tenantRepository.findById(tenantId);
+        if (tenantOpt.isEmpty() && (UUID.fromString("d3b07384-d113-40f4-8a1a-4d23253b2d1d").equals(tenantId) || "sharma".equalsIgnoreCase(com.amazingdeal.multitenancy.TenantContext.getSubdomain()))) {
+            tenantOpt = Optional.of(createDemoTenantIfMissing(tenantId));
+        }
+
+        boolean hasSysGemini = systemGeminiApiKey != null && !systemGeminiApiKey.isBlank();
+        boolean hasSysOpenAi = systemOpenaiApiKey != null && !systemOpenaiApiKey.isBlank();
+
         if (tenantOpt.isEmpty()) {
             return ChatGptStatusResponse.builder()
                     .connected(false)
-                    .hasCustomApiKey(false)
-                    .hasCustomGeminiKey(false)
+                    .hasCustomApiKey(hasSysOpenAi)
+                    .maskedApiKey(hasSysOpenAi ? "sk-platform-active" : null)
+                    .hasCustomGeminiKey(hasSysGemini)
+                    .maskedGeminiKey(hasSysGemini ? "AIza-platform-free" : null)
                     .aiProviderPreference("AUTO")
-                    .activeProvider("DEMO")
-                    .connectionType("DISCONNECTED")
+                    .activeProvider(hasSysGemini ? "GEMINI" : (hasSysOpenAi ? "OPENAI" : "DEMO"))
+                    .connectionType(hasSysGemini ? "GEMINI_API_KEY" : (hasSysOpenAi ? "CUSTOM_API_KEY" : "DISCONNECTED"))
                     .build();
         }
 
         Tenant tenant = tenantOpt.get();
         boolean connected = Boolean.TRUE.equals(tenant.getChatgptConnected());
-        boolean hasCustomKey = tenant.getCustomOpenaiApiKey() != null && !tenant.getCustomOpenaiApiKey().isBlank();
-        boolean hasCustomGeminiKey = tenant.getCustomGeminiApiKey() != null && !tenant.getCustomGeminiApiKey().isBlank();
+        boolean hasTenantKey = tenant.getCustomOpenaiApiKey() != null && !tenant.getCustomOpenaiApiKey().isBlank();
+        boolean hasCustomKey = hasTenantKey || hasSysOpenAi;
+        boolean hasTenantGeminiKey = tenant.getCustomGeminiApiKey() != null && !tenant.getCustomGeminiApiKey().isBlank();
+        boolean hasCustomGeminiKey = hasTenantGeminiKey || hasSysGemini;
 
         String maskedKey = null;
-        if (hasCustomKey) {
+        if (hasTenantKey) {
             try {
                 String plain = sanitizeApiKey(aesCryptoUtil.decrypt(tenant.getCustomOpenaiApiKey()));
                 if (plain != null && plain.length() > 8) {
@@ -313,10 +329,12 @@ public class ChatGptOAuthService {
                     maskedKey = "sk-...active";
                 }
             } catch (Exception ignored) {}
+        } else if (hasSysOpenAi) {
+            maskedKey = "sk-platform-active";
         }
 
         String maskedGeminiKey = null;
-        if (hasCustomGeminiKey) {
+        if (hasTenantGeminiKey) {
             try {
                 String plain = sanitizeApiKey(aesCryptoUtil.decrypt(tenant.getCustomGeminiApiKey()));
                 if (plain != null && plain.length() > 8) {
@@ -325,6 +343,8 @@ public class ChatGptOAuthService {
                     maskedGeminiKey = "AIza...active";
                 }
             } catch (Exception ignored) {}
+        } else if (hasSysGemini) {
+            maskedGeminiKey = "AIza-platform-free";
         }
 
         String pref = tenant.getAiProviderPreference() != null ? tenant.getAiProviderPreference() : "AUTO";
@@ -378,13 +398,18 @@ public class ChatGptOAuthService {
      */
     public String getActiveBearerToken(Tenant tenant) {
         // 1. Check ChatGPT Subscription Access Token
-        if (Boolean.TRUE.equals(tenant.getChatgptConnected()) && tenant.getChatgptAccessToken() != null) {
+        if (tenant != null && Boolean.TRUE.equals(tenant.getChatgptConnected()) && tenant.getChatgptAccessToken() != null) {
             return aesCryptoUtil.decrypt(tenant.getChatgptAccessToken());
         }
 
-        // 2. Fallback to Custom API Key
-        if (tenant.getCustomOpenaiApiKey() != null && !tenant.getCustomOpenaiApiKey().isBlank()) {
+        // 2. Fallback to Tenant Custom API Key
+        if (tenant != null && tenant.getCustomOpenaiApiKey() != null && !tenant.getCustomOpenaiApiKey().isBlank()) {
             return sanitizeApiKey(aesCryptoUtil.decrypt(tenant.getCustomOpenaiApiKey()));
+        }
+
+        // 3. Fallback to Platform System Key
+        if (systemOpenaiApiKey != null && !systemOpenaiApiKey.isBlank()) {
+            return sanitizeApiKey(systemOpenaiApiKey);
         }
 
         return null;
@@ -394,8 +419,11 @@ public class ChatGptOAuthService {
      * Retrieves decrypted Google Gemini API key.
      */
     public String getActiveGeminiApiKey(Tenant tenant) {
-        if (tenant.getCustomGeminiApiKey() != null && !tenant.getCustomGeminiApiKey().isBlank()) {
+        if (tenant != null && tenant.getCustomGeminiApiKey() != null && !tenant.getCustomGeminiApiKey().isBlank()) {
             return sanitizeApiKey(aesCryptoUtil.decrypt(tenant.getCustomGeminiApiKey()));
+        }
+        if (systemGeminiApiKey != null && !systemGeminiApiKey.isBlank()) {
+            return sanitizeApiKey(systemGeminiApiKey);
         }
         return null;
     }
@@ -426,6 +454,10 @@ public class ChatGptOAuthService {
 
     private Tenant createDemoTenantIfMissing(UUID tenantId) {
         return tenantRepository.findById(tenantId).orElseGet(() -> {
+            Optional<Tenant> existingSub = tenantRepository.findBySubdomainIgnoreCase("sharma");
+            if (existingSub.isPresent()) {
+                return existingSub.get();
+            }
             Tenant demo = Tenant.builder()
                     .id(tenantId)
                     .storeName("Sharma General Store")
@@ -436,7 +468,7 @@ public class ChatGptOAuthService {
                     .status("ACTIVE")
                     .storeCategory("Groceries")
                     .build();
-            return tenantRepository.save(demo);
+            return tenantRepository.saveAndFlush(demo);
         });
     }
 }

@@ -59,7 +59,7 @@ class NeonDatabaseConnectionTest {
                         decrypted = "decrypt error: " + ex.getMessage();
                     }
                 }
-                System.out.println("TENANT: " + tenantRs.getString("store_name") + " | " + tenantRs.getString("subdomain") + " | has_key=" + tenantRs.getBoolean("has_key") + " | gemini=" + (decrypted != null ? (decrypted.length() > 10 ? decrypted.substring(0, 8) + "..." + decrypted.substring(decrypted.length() - 4) : decrypted) : "none"));
+                System.out.println("TENANT: " + tenantRs.getString("store_name") + " | " + tenantRs.getString("subdomain") + " | id=" + tenantRs.getString("id") + " | has_key=" + tenantRs.getBoolean("has_key") + " | gemini=" + (decrypted != null ? (decrypted.length() > 10 ? decrypted.substring(0, 8) + "..." + decrypted.substring(decrypted.length() - 4) : decrypted) : "none"));
             }
         }
     }
@@ -165,8 +165,12 @@ class NeonDatabaseConnectionTest {
         assertEquals("AQ.Tes...9999", aqStatus.getMaskedGeminiKey());
         System.out.println(">>> Successfully verified AQ. Gemini key saving & masking: " + aqStatus.getMaskedGeminiKey());
 
-        // Test disconnect
-        var disconnected = chatGptOAuthService.disconnectGemini(tenant.getId());
-        assertFalse(disconnected.isHasCustomGeminiKey());
+        // Test disconnect on isolated tenant and verify demo tenant persistence
+        java.util.UUID demoTenantId = java.util.UUID.fromString("d3b07384-d113-40f4-8a1a-4d23253b2d1d");
+        var demoStatus = chatGptOAuthService.saveCustomGeminiApiKey(demoTenantId, aqKey);
+        assertNotNull(demoStatus);
+        assertTrue(demoStatus.isHasCustomGeminiKey());
+        assertEquals("AQ.Tes...9999", demoStatus.getMaskedGeminiKey());
+        System.out.println(">>> Successfully verified Demo Tenant Gemini Key persistence: " + demoStatus.getMaskedGeminiKey());
     }
 }

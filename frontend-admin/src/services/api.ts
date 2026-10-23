@@ -265,6 +265,7 @@ export class ApiService {
     additionalMerchantNotes?: string;
     simulateDemo?: boolean;
     provider?: 'GEMINI' | 'OPENAI' | 'AUTO';
+    apiKey?: string;
   }): Promise<GeneratedProduct> {
     return this.request<GeneratedProduct>('/api/v1/admin/ai/generate-product', {
       method: 'POST',

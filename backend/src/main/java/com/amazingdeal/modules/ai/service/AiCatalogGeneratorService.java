@@ -34,6 +34,15 @@ public class AiCatalogGeneratorService {
         String openAiToken = chatGptOAuthService.getActiveBearerToken(tenant);
         String geminiKey = chatGptOAuthService.getActiveGeminiApiKey(tenant);
 
+        if (request.getApiKey() != null && !request.getApiKey().isBlank()) {
+            String candidate = ChatGptOAuthService.sanitizeApiKey(request.getApiKey());
+            if (geminiKey == null && candidate != null && (candidate.startsWith("AQ.") || candidate.startsWith("AIza") || "GEMINI".equalsIgnoreCase(request.getProvider()))) {
+                geminiKey = candidate;
+            } else if (openAiToken == null && candidate != null && (candidate.startsWith("sk-") || "OPENAI".equalsIgnoreCase(request.getProvider()))) {
+                openAiToken = candidate;
+            }
+        }
+
         boolean isSimulated = request.isSimulateDemo();
 
         if (!isSimulated) {
