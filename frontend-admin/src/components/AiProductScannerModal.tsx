@@ -102,11 +102,28 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
   };
 
   const handleSaveGeminiKey = async () => {
-    const key = geminiKeyInput.trim();
+    let key = geminiKeyInput.trim().replace(/['"]/g, '');
     if (!key) {
       setError('Please enter your Google Gemini API key (starts with AQ. or AIza...).');
       return;
     }
+
+    // Auto-fix accidental double-paste (key + key)
+    if (key.length % 2 === 0) {
+      const half = key.length / 2;
+      if (key.slice(0, half) === key.slice(half)) {
+        key = key.slice(0, half);
+      }
+    }
+    const secondAq = key.indexOf('AQ.', 3);
+    if (secondAq > 0) {
+      key = key.slice(0, secondAq);
+    }
+    const secondAiza = key.indexOf('AIza', 4);
+    if (secondAiza > 0) {
+      key = key.slice(0, secondAiza);
+    }
+
     if (key.startsWith('sk-')) {
       setError('That appears to be an OpenAI API key (sk-...). Please enter it into the OpenAI field instead.');
       return;
@@ -126,11 +143,24 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
   };
 
   const handleSaveOpenAiKey = async () => {
-    const key = openaiKeyInput.trim();
+    let key = openaiKeyInput.trim().replace(/['"]/g, '');
     if (!key) {
       setError('Please enter your OpenAI API key (starts with sk-...).');
       return;
     }
+
+    // Auto-fix accidental double-paste (key + key)
+    if (key.length % 2 === 0) {
+      const half = key.length / 2;
+      if (key.slice(0, half) === key.slice(half)) {
+        key = key.slice(0, half);
+      }
+    }
+    const secondSk = key.indexOf('sk-', 3);
+    if (secondSk > 0) {
+      key = key.slice(0, secondSk);
+    }
+
     if (key.startsWith('AQ.') || key.startsWith('AIza')) {
       setError('That appears to be a Google Gemini key. Please enter it into the Gemini field above.');
       return;
@@ -632,6 +662,16 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
                 >
                   <Sparkles className="w-3 h-3" />
                   <span>Try with Gemini (Free)</span>
+                </button>
+              )}
+              {(error.toLowerCase().includes('gemini') || error.toLowerCase().includes('401') || error.toLowerCase().includes('unauthorized') || error.toLowerCase().includes('api key')) && (
+                <button
+                  type="button"
+                  onClick={() => setShowKeyInput(true)}
+                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold shadow-sm transition-colors flex items-center space-x-1"
+                >
+                  <Key className="w-3 h-3" />
+                  <span>Update Gemini Key</span>
                 </button>
               )}
               {chatGptStatus?.hasCustomApiKey && (error.toLowerCase().includes('gemini') || error.toLowerCase().includes('503')) && (

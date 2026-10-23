@@ -157,12 +157,13 @@ public class AiCatalogGeneratorService {
         headers.set("x-goog-api-key", geminiKey);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
 
-        // Resilient model pool: starts with gemini-3.8-flash, followed by 3.5-flash-lite, 3.1-flash-lite, and flash-latest
+        // Resilient model pool: starts with gemini-3.8-flash, followed by gemini-flash-latest, 3.5-flash-lite, 3.5-flash, and 3.1-flash-lite
         List<String> modelsToTry = List.of(
                 "gemini-3.8-flash",
+                "gemini-flash-latest",
                 "gemini-3.5-flash-lite",
-                "gemini-3.1-flash-lite",
-                "gemini-flash-latest"
+                "gemini-3.5-flash",
+                "gemini-3.1-flash-lite"
         );
         ResponseEntity<String> response = null;
         String successfulModel = "gemini-3.8-flash";
@@ -295,6 +296,7 @@ public class AiCatalogGeneratorService {
     }
 
     private String extractGeminiErrorMessage(org.springframework.web.client.HttpStatusCodeException e) {
+        int statusCode = e.getStatusCode().value();
         try {
             String body = e.getResponseBodyAsString();
             if (body != null && !body.isBlank()) {
@@ -305,10 +307,13 @@ public class AiCatalogGeneratorService {
                     if ("INVALID_ARGUMENT".equalsIgnoreCase(status) && msg.toLowerCase().contains("api key")) {
                         return "Invalid Google Gemini API key. Please generate a free key at https://aistudio.google.com/app/apikey";
                     }
-                    if ("RESOURCE_EXHAUSTED".equalsIgnoreCase(status) || e.getStatusCode().value() == 429) {
+                    if ("UNAUTHENTICATED".equalsIgnoreCase(status) || statusCode == 401 || msg.toLowerCase().contains("api key not valid") || msg.toLowerCase().contains("unauthenticated")) {
+                        return "Invalid or unauthorized Google Gemini API key (HTTP 401). Please verify or re-enter your key from https://aistudio.google.com/app/apikey";
+                    }
+                    if ("RESOURCE_EXHAUSTED".equalsIgnoreCase(status) || statusCode == 429) {
                         return "Google Gemini free tier quota limit reached. Please wait a minute or run with Instant Demo mode.";
                     }
-                    if ("UNAVAILABLE".equalsIgnoreCase(status) || e.getStatusCode().value() == 503 || msg.toLowerCase().contains("high demand")) {
+                    if ("UNAVAILABLE".equalsIgnoreCase(status) || statusCode == 503 || msg.toLowerCase().contains("high demand")) {
                         return "Google Gemini is currently experiencing temporary high demand spikes (503). Please retry in a few seconds or choose Generate with OpenAI / Instant Demo.";
                     }
                     return "Google Gemini Error: " + msg;
@@ -316,16 +321,19 @@ public class AiCatalogGeneratorService {
             }
         } catch (Exception ignored) {}
 
-        if (e.getStatusCode().value() == 503) {
+        if (statusCode == 401) {
+            return "Invalid or unauthorized Google Gemini API key (HTTP 401). Please check or re-enter your key from https://aistudio.google.com/app/apikey";
+        }
+        if (statusCode == 503) {
             return "Google Gemini servers are temporarily busy (503). Please try again in a few moments or choose Generate with OpenAI / Instant Demo.";
         }
-        if (e.getStatusCode().value() == 400 || e.getStatusCode().value() == 403) {
+        if (statusCode == 400 || statusCode == 403) {
             return "Invalid Google Gemini API key. Please check your key at https://aistudio.google.com/app/apikey";
         }
-        if (e.getStatusCode().value() == 429) {
+        if (statusCode == 429) {
             return "Google Gemini free rate limit reached. Please try again in 1 minute.";
         }
-        return "Google Gemini API error (HTTP " + e.getStatusCode().value() + "): " + e.getStatusText();
+        return "Google Gemini API error (HTTP " + statusCode + "): " + e.getStatusText();
     }
 
     private GeneratedProductResponse executeOpenAiVisionRequest(String token, Tenant tenant, GenerateProductFromImageRequest request) {

@@ -172,12 +172,44 @@ public class ChatGptOAuthService {
     /**
      * Binds a merchant's personal OpenAI API key (BYOK fallback for users without ChatGPT Plus).
      */
+    /**
+     * Sanitizes AI API keys by trimming, stripping quotes, and eliminating accidental duplicate pastes.
+     */
+    public static String sanitizeApiKey(String key) {
+        if (key == null) return null;
+        String sanitized = key.trim().replace("\"", "").replace("'", "").replaceAll("\\s+", "");
+        if (sanitized.isEmpty()) return null;
+
+        // Auto-fix accidental double-paste (e.g. key + key)
+        if (sanitized.length() % 2 == 0) {
+            int half = sanitized.length() / 2;
+            if (sanitized.substring(0, half).equals(sanitized.substring(half))) {
+                sanitized = sanitized.substring(0, half);
+            }
+        }
+        // Auto-fix if second prefix is embedded inside the string
+        int secondAq = sanitized.indexOf("AQ.", 3);
+        if (secondAq > 0) {
+            sanitized = sanitized.substring(0, secondAq);
+        }
+        int secondAiza = sanitized.indexOf("AIza", 4);
+        if (secondAiza > 0) {
+            sanitized = sanitized.substring(0, secondAiza);
+        }
+        int secondSk = sanitized.indexOf("sk-", 3);
+        if (secondSk > 0) {
+            sanitized = sanitized.substring(0, secondSk);
+        }
+        return sanitized;
+    }
+
     @Transactional
     public ChatGptStatusResponse saveCustomApiKey(UUID tenantId, String apiKey) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseGet(() -> createDemoTenantIfMissing(tenantId));
 
-        tenant.setCustomOpenaiApiKey(aesCryptoUtil.encrypt(apiKey.trim()));
+        String sanitized = sanitizeApiKey(apiKey);
+        tenant.setCustomOpenaiApiKey(sanitized != null ? aesCryptoUtil.encrypt(sanitized) : null);
         tenantRepository.save(tenant);
 
         return getStatus(tenantId);
@@ -191,7 +223,8 @@ public class ChatGptOAuthService {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseGet(() -> createDemoTenantIfMissing(tenantId));
 
-        tenant.setCustomGeminiApiKey(aesCryptoUtil.encrypt(apiKey.trim()));
+        String sanitized = sanitizeApiKey(apiKey);
+        tenant.setCustomGeminiApiKey(sanitized != null ? aesCryptoUtil.encrypt(sanitized) : null);
         tenantRepository.save(tenant);
 
         return getStatus(tenantId);
@@ -273,7 +306,7 @@ public class ChatGptOAuthService {
         String maskedKey = null;
         if (hasCustomKey) {
             try {
-                String plain = aesCryptoUtil.decrypt(tenant.getCustomOpenaiApiKey());
+                String plain = sanitizeApiKey(aesCryptoUtil.decrypt(tenant.getCustomOpenaiApiKey()));
                 if (plain != null && plain.length() > 8) {
                     maskedKey = plain.substring(0, 7) + "..." + plain.substring(plain.length() - 4);
                 } else {
@@ -285,7 +318,7 @@ public class ChatGptOAuthService {
         String maskedGeminiKey = null;
         if (hasCustomGeminiKey) {
             try {
-                String plain = aesCryptoUtil.decrypt(tenant.getCustomGeminiApiKey());
+                String plain = sanitizeApiKey(aesCryptoUtil.decrypt(tenant.getCustomGeminiApiKey()));
                 if (plain != null && plain.length() > 8) {
                     maskedGeminiKey = plain.substring(0, 6) + "..." + plain.substring(plain.length() - 4);
                 } else {
@@ -351,7 +384,7 @@ public class ChatGptOAuthService {
 
         // 2. Fallback to Custom API Key
         if (tenant.getCustomOpenaiApiKey() != null && !tenant.getCustomOpenaiApiKey().isBlank()) {
-            return aesCryptoUtil.decrypt(tenant.getCustomOpenaiApiKey());
+            return sanitizeApiKey(aesCryptoUtil.decrypt(tenant.getCustomOpenaiApiKey()));
         }
 
         return null;
@@ -362,7 +395,7 @@ public class ChatGptOAuthService {
      */
     public String getActiveGeminiApiKey(Tenant tenant) {
         if (tenant.getCustomGeminiApiKey() != null && !tenant.getCustomGeminiApiKey().isBlank()) {
-            return aesCryptoUtil.decrypt(tenant.getCustomGeminiApiKey());
+            return sanitizeApiKey(aesCryptoUtil.decrypt(tenant.getCustomGeminiApiKey()));
         }
         return null;
     }

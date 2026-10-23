@@ -10,6 +10,9 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
+import java.util.Map;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -44,10 +47,19 @@ class NeonDatabaseConnectionTest {
             System.out.println(">>> Verified/Created Gemini columns in tenants table! <<<");
 
             ResultSet tenantRs = statement.executeQuery(
-                "SELECT id, store_name, subdomain, owner_email, (custom_openai_api_key IS NOT NULL) as has_key FROM tenants"
+                "SELECT id, store_name, subdomain, owner_email, (custom_openai_api_key IS NOT NULL) as has_key, (custom_gemini_api_key IS NOT NULL) as has_gemini, custom_gemini_api_key FROM tenants"
             );
             while (tenantRs.next()) {
-                System.out.println("TENANT: " + tenantRs.getString("store_name") + " | " + tenantRs.getString("subdomain") + " | has_key=" + tenantRs.getBoolean("has_key"));
+                String rawGemini = tenantRs.getString("custom_gemini_api_key");
+                String decrypted = null;
+                if (rawGemini != null) {
+                    try {
+                        decrypted = chatGptOAuthService.getActiveGeminiApiKey(tenantRepository.findById(java.util.UUID.fromString(tenantRs.getString("id"))).orElse(null));
+                    } catch (Exception ex) {
+                        decrypted = "decrypt error: " + ex.getMessage();
+                    }
+                }
+                System.out.println("TENANT: " + tenantRs.getString("store_name") + " | " + tenantRs.getString("subdomain") + " | has_key=" + tenantRs.getBoolean("has_key") + " | gemini=" + (decrypted != null ? (decrypted.length() > 10 ? decrypted.substring(0, 8) + "..." + decrypted.substring(decrypted.length() - 4) : decrypted) : "none"));
             }
         }
     }
@@ -60,6 +72,31 @@ class NeonDatabaseConnectionTest {
 
     @Autowired
     private com.amazingdeal.modules.ai.service.AiCatalogGeneratorService aiCatalogGeneratorService;
+
+    @Test
+    void testSaveAndVerifyDeduplicatedGeminiKey() {
+        java.util.Optional<com.amazingdeal.modules.tenant.model.Tenant> tenantOpt = tenantRepository.findBySubdomainIgnoreCase("vermakiranastores");
+        assertTrue(tenantOpt.isPresent());
+        com.amazingdeal.modules.tenant.model.Tenant tenant = tenantOpt.get();
+
+        // 1. Test saving duplicate key (simulating merchant double-paste) with synthetic test key
+        String dummyHalf = "AQ.TestDummyKey1234567890abcdefghijklmnopqrstuv9999";
+        String duplicatePastedKey = dummyHalf + dummyHalf;
+        var status = chatGptOAuthService.saveCustomGeminiApiKey(tenant.getId(), duplicatePastedKey);
+        assertNotNull(status);
+        assertTrue(status.isHasCustomGeminiKey());
+        assertEquals("AQ.Tes...9999", status.getMaskedGeminiKey());
+
+        // Verify active decrypted key is deduplicated
+        String activeKey = chatGptOAuthService.getActiveGeminiApiKey(tenant);
+        assertEquals(dummyHalf, activeKey);
+        System.out.println(">>> Verified deduplication with dummy key: " + activeKey);
+
+        // 2. Test sanitizeApiKey method directly for various edge cases
+        assertEquals(dummyHalf, com.amazingdeal.modules.ai.service.ChatGptOAuthService.sanitizeApiKey(duplicatePastedKey));
+        assertEquals("sk-test123456789", com.amazingdeal.modules.ai.service.ChatGptOAuthService.sanitizeApiKey("sk-test123456789sk-test123456789"));
+        assertEquals("AIzaSyTest123456789", com.amazingdeal.modules.ai.service.ChatGptOAuthService.sanitizeApiKey("AIzaSyTest123456789AIzaSyTest123456789"));
+    }
 
     @Test
     void testVermaKiranaKeyThrowsClearCreditExhaustedError() {

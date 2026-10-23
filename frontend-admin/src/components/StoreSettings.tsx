@@ -109,11 +109,27 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
   };
 
   const handleSaveGeminiKey = async () => {
-    const key = geminiKey.trim();
+    let key = geminiKey.trim().replace(/['"]/g, '');
     if (!key) {
       alert('Please enter your Google Gemini API key.');
       return;
     }
+    // Auto-fix accidental double-paste (key + key)
+    if (key.length % 2 === 0) {
+      const half = key.length / 2;
+      if (key.slice(0, half) === key.slice(half)) {
+        key = key.slice(0, half);
+      }
+    }
+    const secondAq = key.indexOf('AQ.', 3);
+    if (secondAq > 0) {
+      key = key.slice(0, secondAq);
+    }
+    const secondAiza = key.indexOf('AIza', 4);
+    if (secondAiza > 0) {
+      key = key.slice(0, secondAiza);
+    }
+
     if (key.startsWith('sk-')) {
       alert('This looks like an OpenAI key (starts with sk-). Please paste it into the OpenAI card instead.');
       return;
