@@ -103,8 +103,8 @@ export interface GeneratedProduct {
   title: string;
   description: string;
   category: string;
-  suggestedPrice: number;
-  comparePrice?: number;
+  suggestedPrice: number | string;
+  comparePrice?: number | string;
   tags?: string[];
   keyHighlights?: string[];
   ingredientsOrSpecs?: string;
@@ -112,7 +112,7 @@ export interface GeneratedProduct {
   imageUrl?: string;
   imagesJson?: string;
   angles?: AiPhotoAngle[];
-  inventoryQuantity: number;
+  inventoryQuantity: number | string;
   poweredBy?: string;
 }
 

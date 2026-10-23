@@ -496,6 +496,24 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
       setSubmitting(true);
       setError(null);
 
+      const rawPrice = generatedDraft.suggestedPrice;
+      const parsedPrice = typeof rawPrice === 'number' ? rawPrice : parseFloat(String(rawPrice).trim());
+      if (isNaN(parsedPrice) || parsedPrice <= 0) {
+        setError('Please enter a valid Selling Price greater than ₹0.');
+        setSubmitting(false);
+        return;
+      }
+
+      const rawCompare = generatedDraft.comparePrice;
+      const parsedCompare = (rawCompare !== undefined && rawCompare !== null && String(rawCompare).trim() !== '')
+        ? parseFloat(String(rawCompare).trim())
+        : undefined;
+
+      const rawStock = generatedDraft.inventoryQuantity;
+      const parsedStock = (rawStock !== undefined && rawStock !== null && String(rawStock).trim() !== '')
+        ? parseInt(String(rawStock).trim(), 10)
+        : 50;
+
       const currentCover = (studioAngles.length > 0 && studioAngles[activeAngleIndex])
         ? studioAngles[activeAngleIndex].imageUrl
         : (generatedDraft.imageUrl || imagePreview || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80');
@@ -507,12 +525,12 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
       await ApiService.createProduct({
         title: generatedDraft.title,
         description: generatedDraft.description,
-        price: generatedDraft.suggestedPrice,
-        comparePrice: generatedDraft.comparePrice,
+        price: parsedPrice,
+        comparePrice: (parsedCompare !== undefined && !isNaN(parsedCompare)) ? parsedCompare : undefined,
         category: generatedDraft.category || 'Apparel & Clothing',
         imageUrl: currentCover,
         imagesJson: allAnglesJson,
-        inventoryQuantity: generatedDraft.inventoryQuantity || 50,
+        inventoryQuantity: !isNaN(parsedStock) ? parsedStock : 50,
         tracksInventory: true,
         status: 'ACTIVE',
       });
@@ -1298,10 +1316,13 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
                       <input
                         type="number"
                         required
-                        step="0.5"
-                        value={generatedDraft.suggestedPrice}
-                        onChange={(e) => setGeneratedDraft({ ...generatedDraft, suggestedPrice: parseFloat(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold text-emerald-700"
+                        step="any"
+                        min="0"
+                        placeholder="0.00"
+                        value={generatedDraft.suggestedPrice ?? ''}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setGeneratedDraft({ ...generatedDraft, suggestedPrice: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                       />
                     </div>
 
@@ -1311,10 +1332,13 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        step="0.5"
-                        value={generatedDraft.comparePrice || ''}
-                        onChange={(e) => setGeneratedDraft({ ...generatedDraft, comparePrice: parseFloat(e.target.value) || undefined })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-500 line-through"
+                        step="any"
+                        min="0"
+                        placeholder="Optional"
+                        value={generatedDraft.comparePrice ?? ''}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setGeneratedDraft({ ...generatedDraft, comparePrice: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-500 line-through focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                       />
                     </div>
 
@@ -1326,7 +1350,7 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
                         type="text"
                         value={generatedDraft.category}
                         onChange={(e) => setGeneratedDraft({ ...generatedDraft, category: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                       />
                     </div>
 
@@ -1336,9 +1360,13 @@ export const AiProductScannerModal: React.FC<AiProductScannerModalProps> = ({
                       </label>
                       <input
                         type="number"
-                        value={generatedDraft.inventoryQuantity || 50}
-                        onChange={(e) => setGeneratedDraft({ ...generatedDraft, inventoryQuantity: parseInt(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs"
+                        min="0"
+                        step="1"
+                        placeholder="50"
+                        value={generatedDraft.inventoryQuantity ?? ''}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setGeneratedDraft({ ...generatedDraft, inventoryQuantity: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                       />
                     </div>
                   </div>
