@@ -205,6 +205,28 @@ Traditional e-commerce platforms either charge exorbitant subscription fees, tak
   - 1-Step Checkout Modal supporting delivery address, payment mode selection (Direct UPI, COD, Razorpay).
   - Order success confirmation with dynamic QR code and direct UPI app launcher.
 
+### 3.9. Vyapar-Grade SME ERP: POS Counter Billing, GST Invoicing & Parties Khata
+- **High-Speed Counter POS (`PosCounter.tsx`):**
+  - Instant shop counter billing interface with global laser barcode scanning input and hotkeys (`F2` New Bill, `F4` Quick Pay Cash, `F8` Clear).
+  - Fast search with real-time product autocomplete, quick-pick popular item chips, and customizable units (`pcs`, `kg`, `g`, `litre`, `box`).
+  - Cash Change Calculator with one-tap rupee presets (₹100, ₹200, ₹500, ₹2000) and instant "Change to Return" display.
+  - Direct UPI payment integration with merchant's VPA QR code.
+- **GST & Indian Tax Compliance Engine:**
+  - Automated state-based tax split logic: Intrastate supplies split into CGST (50%) and SGST (50%); Interstate supplies calculate IGST (100%).
+  - Pre-mapped GST tax slabs (0%, 5%, 12%, 18%, 28%) and HSN/SAC code tracking.
+  - Automatic nearest rupee round-off calculation.
+  - Omnichannel inventory decrement: Counter billing automatically reduces live product inventory and marks items OUT_OF_STOCK when exhausted.
+- **Multi-Format Receipt & Invoice Printing:**
+  - **A4 / A5 Professional GST Tax Invoices (`GstInvoiceModal.tsx`):** Complete with merchant branding, GSTIN, customer GSTIN, place of supply, HSN summary, amount in words, bank account details for NEFT/IMPS, terms & conditions, and digital signature box.
+  - **58mm / 80mm ESC/POS Thermal Receipts:** Monospace thermal slip formatting with cut lines and UPI QR.
+  - **1-Tap WhatsApp Sharing:** Direct `https://wa.me/` deep links with pre-composed itemized summary and dynamic UPI payment URL.
+- **Parties & Udhaar Khata Management (`PartiesKhata.tsx`):**
+  - Customer and Supplier ledgers with live balance tracking (positive = "Lene Hain" / Receivables; negative = "Dene Hain" / Payables).
+  - 1-Tap WhatsApp Payment Reminder button with pre-filled formal message and merchant UPI link.
+  - Add / Edit Party modal with auto-extraction of 2-digit Indian State code from 15-digit GSTIN.
+- **Document Conversion Engine:**
+  - Full document lifecycle support: 1-click conversion from Estimates / Quotations (`ESTIMATE`) to official GST Tax Invoices (`TAX_INVOICE`).
+
 ---
 
 ## 4. Chronological Decision Log (With Exact Timestamps)
@@ -267,6 +289,7 @@ The following log documents every major architecture, infrastructure, and featur
 | **2026-10-24 15:10:00 +0530** | *Workspace* | **Architecture / Taxonomy** | Formalized and documented core store category verticals across onboarding, database, and storefront filters. |
 | **2026-10-24 15:25:00 +0530** | *Workspace* | **Feature: Multi-Category & Smart Catalog** | Expanded store categories to 18 exhaustive retail verticals. Implemented multi-category store registration and settings management (`store_category` expanded to 1000/TEXT). Created 150+ item catalog bank (`categoriesData.ts`) and built 1-tap Quick-Pick item bars and real-time Title autocomplete in the Product Catalog. |
 | **2026-10-24 16:20:00 +0530** | `f95bfe9` | **Cloudflare Deployment** | Identified that GitHub Actions edge deployment had been skipped due to unconfigured repository secrets. Configured custom domain route for `amazingdeal.co.in` in `frontend-storefront/wrangler.json`, deployed production builds for both `admin.amazingdeal.co.in` and `amazingdeal.co.in` via Cloudflare Wrangler, and verified live bundle delivery. |
+| **2026-10-24 18:25:00 +0530** | *Workspace* | **Feature: Vyapar ERP & POS Billing (Phase 1)** | Implemented Vyapar-grade POS counter billing, GST tax invoicing, and customer/supplier Khata ledgers. Added `Party` and `Invoice` entities extending `TenantAwareEntity`. Built state-based tax split engine (Intrastate CGST+SGST vs Interstate IGST), real-time inventory decrement, sequential invoice numbering, document conversion (`ESTIMATE` -> `TAX_INVOICE`), A4/A5 GST Tax Invoice modal with print/WhatsApp sharing, ESC/POS thermal receipt formatting, and 1-tap WhatsApp payment reminders. Verified with 6 end-to-end integration tests. |
 
 ---
 

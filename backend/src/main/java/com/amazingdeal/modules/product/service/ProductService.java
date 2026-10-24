@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -47,6 +48,11 @@ public class ProductService {
                 .imageUrl(request.getImageUrl())
                 .imagesJson(request.getImagesJson())
                 .category(request.getCategory() != null ? request.getCategory() : "General")
+                .hsnSac(request.getHsnSac())
+                .gstRate(request.getGstRate() != null ? request.getGstRate() : BigDecimal.ZERO)
+                .barcode(request.getBarcode())
+                .unit(request.getUnit() != null ? request.getUnit() : "pcs")
+                .purchasePrice(request.getPurchasePrice())
                 .status(request.getStatus() != null ? request.getStatus() : "ACTIVE")
                 .build();
         product.setTenantId(tenantId);
@@ -69,6 +75,11 @@ public class ProductService {
         if (request.getImageUrl() != null) product.setImageUrl(request.getImageUrl());
         if (request.getImagesJson() != null) product.setImagesJson(request.getImagesJson());
         if (request.getCategory() != null) product.setCategory(request.getCategory());
+        if (request.getHsnSac() != null) product.setHsnSac(request.getHsnSac());
+        if (request.getGstRate() != null) product.setGstRate(request.getGstRate());
+        if (request.getBarcode() != null) product.setBarcode(request.getBarcode());
+        if (request.getUnit() != null) product.setUnit(request.getUnit());
+        if (request.getPurchasePrice() != null) product.setPurchasePrice(request.getPurchasePrice());
         if (request.getStatus() != null) product.setStatus(request.getStatus());
 
         return productRepository.save(product);

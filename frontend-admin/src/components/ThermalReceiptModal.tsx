@@ -3,21 +3,25 @@ import { Printer, X, Check } from 'lucide-react';
 import { Order } from '../types';
 
 interface ThermalReceiptModalProps {
-  order: Order | null;
+  order?: Order | null;
+  title?: string;
   receiptText: string;
   onClose: () => void;
 }
 
 export const ThermalReceiptModal: React.FC<ThermalReceiptModalProps> = ({
   order,
+  title,
   receiptText,
   onClose,
 }) => {
-  if (!order) return null;
+  if (!order && !title && !receiptText) return null;
 
   const handlePrint = () => {
     window.print();
   };
+
+  const displayTitle = title || (order ? `Thermal Receipt (${order.orderNumber})` : 'Thermal Receipt');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -28,7 +32,7 @@ export const ThermalReceiptModal: React.FC<ThermalReceiptModalProps> = ({
           <div className="flex items-center space-x-2">
             <Printer className="w-5 h-5 text-emerald-400" />
             <span className="font-extrabold text-sm tracking-wide">
-              Thermal Receipt ({order.orderNumber})
+              {displayTitle}
             </span>
           </div>
           <button

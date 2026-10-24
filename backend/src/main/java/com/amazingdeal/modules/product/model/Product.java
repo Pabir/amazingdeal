@@ -56,6 +56,23 @@ public class Product extends TenantAwareEntity {
     @Column(name = "category", length = 100)
     private String category;
 
+    @Column(name = "hsn_sac", length = 10)
+    private String hsnSac;
+
+    @Builder.Default
+    @Column(name = "gst_rate", precision = 5, scale = 2)
+    private BigDecimal gstRate = BigDecimal.ZERO;
+
+    @Column(name = "barcode", length = 100)
+    private String barcode;
+
+    @Builder.Default
+    @Column(name = "unit", length = 20)
+    private String unit = "pcs";
+
+    @Column(name = "purchase_price", precision = 10, scale = 2)
+    private BigDecimal purchasePrice;
+
     @Builder.Default
     @Column(name = "status", nullable = false, length = 20)
     private String status = "ACTIVE"; // ACTIVE, OUT_OF_STOCK, DRAFT

@@ -1,11 +1,16 @@
 import React from 'react';
-import { Store, ExternalLink, Bell, Volume2, VolumeX, LogOut, Package, ShoppingBag, Settings } from 'lucide-react';
+import { 
+  Store, ExternalLink, Volume2, VolumeX, LogOut, 
+  Package, ShoppingBag, Settings, Receipt, Users, FileText 
+} from 'lucide-react';
 import { Tenant } from '../types';
+
+export type AdminTab = 'pos' | 'orders' | 'invoices' | 'parties' | 'products' | 'settings';
 
 interface NavbarProps {
   tenant: Tenant | null;
-  activeTab: 'orders' | 'products' | 'settings';
-  setActiveTab: (tab: 'orders' | 'products' | 'settings') => void;
+  activeTab: AdminTab;
+  setActiveTab: (tab: AdminTab) => void;
   soundEnabled: boolean;
   setSoundEnabled: (enabled: boolean) => void;
   onLogout: () => void;
@@ -46,10 +51,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-extrabold text-slate-900 tracking-tight text-lg">
+                <span className="font-extrabold text-slate-900 tracking-tight text-base sm:text-lg">
                   {tenant?.storeName || 'AmazingDeal Merchant'}
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
                   Live
                 </span>
               </div>
@@ -67,47 +72,89 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <nav className="hidden md:flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
+          {/* Navigation Tabs (Desktop) */}
+          <nav className="hidden lg:flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
+            {/* POS Counter Button */}
+            <button
+              onClick={() => setActiveTab('pos')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'pos'
+                  ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <Receipt className="w-4 h-4" />
+              <span>Counter POS</span>
+            </button>
+
+            {/* Live Orders Button */}
             <button
               onClick={() => setActiveTab('orders')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 activeTab === 'orders'
                   ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
               }`}
             >
               <ShoppingBag className="w-4 h-4 text-emerald-600" />
-              <span>Live Orders</span>
+              <span>Online Orders</span>
               {pendingCount > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-white animate-pulse">
+                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white animate-pulse">
                   {pendingCount}
                 </span>
               )}
             </button>
 
+            {/* Invoices & Bills Button */}
             <button
-              onClick={() => setActiveTab('products')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                activeTab === 'products'
+              onClick={() => setActiveTab('invoices')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'invoices'
                   ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
               }`}
             >
-              <Package className="w-4 h-4 text-teal-600" />
-              <span>Products & Stock</span>
+              <FileText className="w-4 h-4 text-indigo-600" />
+              <span>Bills & GST</span>
             </button>
 
+            {/* Parties & Khata Button */}
+            <button
+              onClick={() => setActiveTab('parties')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'parties'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <Users className="w-4 h-4 text-teal-600" />
+              <span>Parties & Khata</span>
+            </button>
+
+            {/* Products & Stock Button */}
+            <button
+              onClick={() => setActiveTab('products')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'products'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <Package className="w-4 h-4 text-slate-600" />
+              <span>Catalog & Stock</span>
+            </button>
+
+            {/* Settings Button */}
             <button
               onClick={() => setActiveTab('settings')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 activeTab === 'settings'
                   ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
               }`}
             >
               <Settings className="w-4 h-4 text-slate-600" />
-              <span>Store Settings</span>
+              <span>Settings</span>
             </button>
           </nav>
 
@@ -123,7 +170,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   : 'bg-slate-100 border-slate-200 text-slate-400'
               }`}
             >
-              {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             </button>
 
             {/* Logout */}
@@ -132,23 +179,33 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Logout"
               className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Mobile Navigation Tabs */}
-        <div className="flex md:hidden items-center justify-around py-2 border-t border-slate-100">
+        {/* Mobile / Tablet Navigation Tabs */}
+        <div className="flex lg:hidden items-center justify-around py-2 border-t border-slate-100 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setActiveTab('pos')}
+            className={`flex flex-col items-center py-1 px-2.5 text-[11px] font-bold ${
+              activeTab === 'pos' ? 'text-emerald-600' : 'text-slate-500'
+            }`}
+          >
+            <Receipt className="w-4 h-4" />
+            <span>POS</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('orders')}
-            className={`flex flex-col items-center py-1 px-3 text-xs font-semibold ${
+            className={`flex flex-col items-center py-1 px-2.5 text-[11px] font-bold ${
               activeTab === 'orders' ? 'text-emerald-600' : 'text-slate-500'
             }`}
           >
             <div className="relative">
-              <ShoppingBag className="w-5 h-5" />
+              <ShoppingBag className="w-4 h-4" />
               {pendingCount > 0 && (
-                <span className="absolute -top-1 -right-2 px-1 text-[10px] rounded-full bg-amber-500 text-white font-bold">
+                <span className="absolute -top-1 -right-2 px-1 text-[9px] rounded-full bg-amber-500 text-white font-bold">
                   {pendingCount}
                 </span>
               )}
@@ -157,22 +214,42 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           <button
+            onClick={() => setActiveTab('invoices')}
+            className={`flex flex-col items-center py-1 px-2.5 text-[11px] font-bold ${
+              activeTab === 'invoices' ? 'text-emerald-600' : 'text-slate-500'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Bills</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('parties')}
+            className={`flex flex-col items-center py-1 px-2.5 text-[11px] font-bold ${
+              activeTab === 'parties' ? 'text-emerald-600' : 'text-slate-500'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Khata</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('products')}
-            className={`flex flex-col items-center py-1 px-3 text-xs font-semibold ${
+            className={`flex flex-col items-center py-1 px-2.5 text-[11px] font-bold ${
               activeTab === 'products' ? 'text-emerald-600' : 'text-slate-500'
             }`}
           >
-            <Package className="w-5 h-5" />
-            <span>Products</span>
+            <Package className="w-4 h-4" />
+            <span>Stock</span>
           </button>
 
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex flex-col items-center py-1 px-3 text-xs font-semibold ${
+            className={`flex flex-col items-center py-1 px-2.5 text-[11px] font-bold ${
               activeTab === 'settings' ? 'text-emerald-600' : 'text-slate-500'
             }`}
           >
-            <Settings className="w-5 h-5" />
+            <Settings className="w-4 h-4" />
             <span>Settings</span>
           </button>
         </div>

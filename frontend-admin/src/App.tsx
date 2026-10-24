@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Navbar } from './components/Navbar';
+import { Navbar, AdminTab } from './components/Navbar';
+import { PosCounter } from './components/PosCounter';
+import { InvoiceList } from './components/InvoiceList';
+import { PartiesKhata } from './components/PartiesKhata';
+import { GstInvoiceModal } from './components/GstInvoiceModal';
 import { OrderBoard } from './components/OrderBoard';
 import { ProductCatalog } from './components/ProductCatalog';
 import { StoreSettings } from './components/StoreSettings';
 import { ThermalReceiptModal } from './components/ThermalReceiptModal';
 import { AuthModal } from './components/AuthModal';
 import { ApiService } from './services/api';
-import { Order, OrderStats, Product, Tenant, AuthResponse } from './types';
+import { Order, OrderStats, Product, Tenant, AuthResponse, Party, Invoice } from './types';
 
 // Audio chime using Web Audio API (zero external assets needed)
 function playOrderChime() {
@@ -36,15 +40,19 @@ function playOrderChime() {
 export function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(ApiService.isAuthenticated());
   const [tenant, setTenant] = useState<Tenant | null>(null);
-  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'settings'>('orders');
+  const [activeTab, setActiveTab] = useState<AdminTab>('pos');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [parties, setParties] = useState<Party[]>([]);
   const [stats, setStats] = useState<OrderStats | null>(null);
 
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
+  const [receiptModalTitle, setReceiptModalTitle] = useState<string>('');
   const [receiptText, setReceiptText] = useState<string>('');
+  const [selectedA4Invoice, setSelectedA4Invoice] = useState<Invoice | null>(null);
 
   const prevOrderCountRef = useRef<number>(0);
 
@@ -69,6 +77,22 @@ export function App() {
       // 3. Fetch Products
       const prodList = await ApiService.getProducts();
       setProducts(prodList);
+
+      // 4. Fetch Invoices
+      try {
+        const invList = await ApiService.getInvoices();
+        setInvoices(invList);
+      } catch (e) {
+        console.warn('Invoices fetch fallback:', e);
+      }
+
+      // 5. Fetch Parties
+      try {
+        const partyList = await ApiService.getParties();
+        setParties(partyList);
+      } catch (e) {
+        console.warn('Parties fetch fallback:', e);
+      }
     } catch (err: any) {
       console.warn('Dashboard data fetch fallback:', err.message);
       // Demo fallback data if API is initializing
@@ -131,6 +155,10 @@ export function App() {
           price: 66.0,
           comparePrice: 70.0,
           category: 'Dairy & Eggs',
+          hsnSac: '0401',
+          gstRate: 5,
+          barcode: '890103000101',
+          unit: 'litre',
           inventoryQuantity: 45,
           tracksInventory: true,
           status: 'ACTIVE',
@@ -142,6 +170,10 @@ export function App() {
           price: 245.0,
           comparePrice: 280.0,
           category: 'Grains & Flours',
+          hsnSac: '1101',
+          gstRate: 5,
+          barcode: '890103000102',
+          unit: 'pcs',
           inventoryQuantity: 28,
           tracksInventory: true,
           status: 'ACTIVE',
@@ -153,10 +185,103 @@ export function App() {
           price: 140.0,
           comparePrice: 160.0,
           category: 'Grains & Flours',
+          hsnSac: '1006',
+          gstRate: 5,
+          barcode: '890103000103',
+          unit: 'pcs',
           inventoryQuantity: 35,
           tracksInventory: true,
           status: 'ACTIVE',
           imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80',
+        }
+      ]);
+      setParties([
+        {
+          id: 'pty-1',
+          partyType: 'CUSTOMER',
+          partyName: 'Aarav Mehta',
+          companyName: 'Mehta Textiles',
+          phone: '9820123456',
+          email: 'aarav@mehta.in',
+          gstin: '07AAACM1234A1Z5',
+          billingAddress: 'Flat 402, Sunshine Heights, Civil Lines, Delhi',
+          billingStateCode: '07',
+          currentBalance: 1250.00, // Lene Hain
+          creditLimit: 10000,
+          creditPeriodDays: 30,
+        },
+        {
+          id: 'pty-2',
+          partyType: 'CUSTOMER',
+          partyName: 'Pooja Verma',
+          phone: '9811223344',
+          billingAddress: 'C-12, Sector 15, Rohini, Delhi',
+          billingStateCode: '07',
+          currentBalance: 0.00,
+          creditLimit: 5000,
+          creditPeriodDays: 15,
+        },
+        {
+          id: 'pty-3',
+          partyType: 'SUPPLIER',
+          partyName: 'Aggarwal Flour & Grain Mill',
+          companyName: 'Aggarwal Agro Industries Ltd',
+          phone: '9899001122',
+          gstin: '07AAGCA9876B1Z2',
+          billingAddress: 'Naya Bazaar, Old Delhi',
+          billingStateCode: '07',
+          currentBalance: -4500.00, // Dene Hain
+          creditLimit: 50000,
+          creditPeriodDays: 45,
+        }
+      ]);
+      setInvoices([
+        {
+          id: 'inv-1001',
+          invoiceNumber: 'INV-2026-0001',
+          partyName: 'Aarav Mehta',
+          partyPhone: '9820123456',
+          partyGstin: '07AAACM1234A1Z5',
+          documentType: 'TAX_INVOICE',
+          invoiceDate: new Date().toISOString().split('T')[0],
+          placeOfSupply: '07',
+          subtotal: 1060.00,
+          cgstAmount: 26.50,
+          sgstAmount: 26.50,
+          igstAmount: 0.00,
+          roundOff: 0.00,
+          totalAmount: 1113.00,
+          paidAmount: 1113.00,
+          balanceDue: 0.00,
+          paymentStatus: 'PAID',
+          paymentMode: 'UPI',
+          items: [
+            {
+              itemName: 'Whole Wheat Atta (5kg)',
+              hsnSac: '1101',
+              quantity: 2,
+              unit: 'pcs',
+              unitPrice: 245.0,
+              discountPct: 0,
+              gstRate: 5,
+              cgstAmount: 12.25,
+              sgstAmount: 12.25,
+              totalAmount: 514.50,
+            },
+            {
+              itemName: 'Organic Premium Basmati Rice (1kg)',
+              hsnSac: '1006',
+              quantity: 4,
+              unit: 'pcs',
+              unitPrice: 140.0,
+              discountPct: 0,
+              gstRate: 5,
+              cgstAmount: 14.00,
+              sgstAmount: 14.00,
+              totalAmount: 588.00,
+            }
+          ],
+          createdAt: new Date().toISOString(),
         }
       ]);
     }
@@ -175,12 +300,20 @@ export function App() {
 
     setTenant({
       id: storedTenantId || 'tenant-1',
-      storeName: storedName || 'My Store',
+      storeName: storedName || 'Sharma Kirana Store',
       subdomain: storedSubdomain || 'mystore',
       ownerPhone: storedPhone || '9876543210',
       ownerEmail: storedEmail || 'merchant@amazingdeal.co.in',
       status: 'ACTIVE',
       storeCategory: 'Groceries',
+      storeAddress: 'Shop 14, Main Bazaar, Civil Lines, Delhi - 110054',
+      gstin: '07AAAAA0000A1Z5',
+      stateCode: '07',
+      invoicePrefix: 'INV',
+      bankName: 'HDFC Bank',
+      bankAccountNumber: '50200012345678',
+      bankIfsc: 'HDFC0001234',
+      bankBranch: 'Civil Lines, Delhi',
       upiVpa: storedVpa || `${storedSubdomain || 'mystore'}@okaxis`,
       deliveryRadiusKm: 5.0,
       deliveryCharge: 30.0,
@@ -207,8 +340,8 @@ export function App() {
 
     loadData();
 
-    // Live order polling every 12 seconds
-    const interval = setInterval(loadData, 12000);
+    // Live order polling every 15 seconds
+    const interval = setInterval(loadData, 15000);
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
@@ -249,6 +382,7 @@ export function App() {
 
   const handlePrintReceipt = async (order: Order) => {
     setReceiptOrder(order);
+    setReceiptModalTitle(`Receipt (${order.orderNumber})`);
     try {
       const text = await ApiService.getThermalReceipt(order.id);
       setReceiptText(text);
@@ -276,6 +410,40 @@ Deliver To: ${order.deliveryAddress}
 ================================
   Thank you for shopping local!
   Powered by amazingdeal.co.in
+================================\n\n`;
+      setReceiptText(fallback);
+    }
+  };
+
+  const handleOpenA4Invoice = (invoice: Invoice) => {
+    setSelectedA4Invoice(invoice);
+  };
+
+  const handleOpenThermalInvoice = async (invoice: Invoice) => {
+    setReceiptModalTitle(invoice.invoiceNumber);
+    try {
+      const text = await ApiService.getInvoiceThermalReceipt(invoice.id);
+      setReceiptText(text);
+    } catch {
+      const fallback = `================================
+     ${(tenant?.storeName || 'AMAZINGDEAL STORE').toUpperCase()}
+           GSTIN: ${tenant?.gstin || '07AAAAA0000A1Z5'}
+================================
+Bill No: ${invoice.invoiceNumber}
+Date:    ${invoice.invoiceDate}
+Customer: ${invoice.partyName}
+--------------------------------
+Item                Qty    Amount
+--------------------------------
+${invoice.items.map(i => `${i.itemName.padEnd(16).slice(0, 16)} ${i.quantity}  ₹${i.totalAmount.toFixed(2)}`).join('\n')}
+--------------------------------
+Subtotal:            ₹${invoice.subtotal.toFixed(2)}
+Tax (GST):           ₹${((invoice.cgstAmount || 0) + (invoice.sgstAmount || 0) + (invoice.igstAmount || 0)).toFixed(2)}
+GRAND TOTAL:         ₹${invoice.totalAmount.toFixed(2)}
+Paid (${invoice.paymentMode}):  ₹${invoice.paidAmount.toFixed(2)}
+${invoice.balanceDue > 0 ? `Balance Due:         ₹${invoice.balanceDue.toFixed(2)}` : ''}
+================================
+  Thank you! Visit again.
 ================================\n\n`;
       setReceiptText(fallback);
     }
@@ -336,7 +504,20 @@ Deliver To: ${order.deliveryAddress}
         pendingCount={pendingCount}
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+        {/* POS Counter Billing Screen */}
+        {activeTab === 'pos' && (
+          <PosCounter
+            tenant={tenant}
+            products={products}
+            parties={parties}
+            onOpenA4Invoice={handleOpenA4Invoice}
+            onOpenThermalReceipt={handleOpenThermalInvoice}
+            onRefreshParties={loadData}
+          />
+        )}
+
+        {/* Online Storefront Orders */}
         {activeTab === 'orders' && (
           <OrderBoard
             orders={orders}
@@ -346,20 +527,57 @@ Deliver To: ${order.deliveryAddress}
           />
         )}
 
+        {/* GST Invoices & Bills Management */}
+        {activeTab === 'invoices' && (
+          <InvoiceList
+            tenant={tenant}
+            invoices={invoices}
+            onRefresh={loadData}
+            onOpenA4Invoice={handleOpenA4Invoice}
+            onOpenThermalReceipt={handleOpenThermalInvoice}
+          />
+        )}
+
+        {/* Parties & Udhaar Khata */}
+        {activeTab === 'parties' && (
+          <PartiesKhata
+            tenant={tenant}
+            parties={parties}
+            onRefresh={loadData}
+          />
+        )}
+
+        {/* Products & Catalog */}
         {activeTab === 'products' && (
           <ProductCatalog products={products} onRefresh={loadData} storeCategory={tenant?.storeCategory} />
         )}
 
+        {/* Store Settings */}
         {activeTab === 'settings' && (
           <StoreSettings tenant={tenant} onSave={handleSaveSettings} />
         )}
       </main>
 
-      {receiptOrder && (
+      {/* A4 / A5 GST Tax Invoice Print & WhatsApp Modal */}
+      {selectedA4Invoice && (
+        <GstInvoiceModal
+          invoice={selectedA4Invoice}
+          tenant={tenant}
+          onClose={() => setSelectedA4Invoice(null)}
+        />
+      )}
+
+      {/* 58mm / 80mm ESC-POS Thermal Receipt Modal */}
+      {receiptText && (
         <ThermalReceiptModal
+          title={receiptModalTitle}
           order={receiptOrder}
           receiptText={receiptText}
-          onClose={() => setReceiptOrder(null)}
+          onClose={() => {
+            setReceiptText('');
+            setReceiptOrder(null);
+            setReceiptModalTitle('');
+          }}
         />
       )}
     </div>

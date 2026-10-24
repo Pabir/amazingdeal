@@ -1,4 +1,4 @@
-import { AuthResponse, Order, OrderStats, Product, Tenant, ChatGptStatus, ChatGptAuthUrlResponse, GeneratedProduct, AiPhotoEnhanceRequest, AiPhotoEnhanceResponse } from '../types';
+import { AuthResponse, Order, OrderStats, Product, Tenant, ChatGptStatus, ChatGptAuthUrlResponse, GeneratedProduct, AiPhotoEnhanceRequest, AiPhotoEnhanceResponse, Party, Invoice } from '../types';
 
 const getApiBase = (): string => {
   if (typeof window !== 'undefined') {
@@ -285,5 +285,86 @@ export class ApiService {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  // Parties & Khata (Vyapar)
+  public static async getParties(type?: string, search?: string): Promise<Party[]> {
+    const params = new URLSearchParams();
+    if (type && type !== 'ALL') params.append('type', type);
+    if (search) params.append('search', search);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request<Party[]>(`/api/v1/admin/parties${query}`);
+  }
+
+  public static async getParty(id: string): Promise<Party> {
+    return this.request<Party>(`/api/v1/admin/parties/${id}`);
+  }
+
+  public static async createParty(data: Partial<Party>): Promise<Party> {
+    return this.request<Party>('/api/v1/admin/parties', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  public static async updateParty(id: string, data: Partial<Party>): Promise<Party> {
+    return this.request<Party>(`/api/v1/admin/parties/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  public static async deleteParty(id: string): Promise<void> {
+    await this.request<void>(`/api/v1/admin/parties/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Invoices & POS Billing (Vyapar)
+  public static async getInvoices(filters?: {
+    documentType?: string;
+    paymentStatus?: string;
+    startDate?: string;
+    endDate?: string;
+    query?: string;
+  }): Promise<Invoice[]> {
+    const params = new URLSearchParams();
+    if (filters?.documentType && filters.documentType !== 'ALL') params.append('documentType', filters.documentType);
+    if (filters?.paymentStatus && filters.paymentStatus !== 'ALL') params.append('paymentStatus', filters.paymentStatus);
+    if (filters?.startDate) params.append('startDate', filters.startDate);
+    if (filters?.endDate) params.append('endDate', filters.endDate);
+    if (filters?.query) params.append('query', filters.query);
+
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request<Invoice[]>(`/api/v1/admin/invoices${query}`);
+  }
+
+  public static async getInvoice(id: string): Promise<Invoice> {
+    return this.request<Invoice>(`/api/v1/admin/invoices/${id}`);
+  }
+
+  public static async createInvoice(data: any): Promise<Invoice> {
+    return this.request<Invoice>('/api/v1/admin/invoices', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  public static async convertInvoice(id: string, targetDocType: string): Promise<Invoice> {
+    return this.request<Invoice>(`/api/v1/admin/invoices/${id}/convert?targetDocType=${encodeURIComponent(targetDocType)}`, {
+      method: 'POST',
+    });
+  }
+
+  public static async getInvoiceThermalReceipt(id: string, width: number = 80): Promise<string> {
+    const token = this.getToken();
+    const tenantId = this.getTenantId();
+    const headers: Record<string, string> = { Accept: 'text/plain' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (tenantId) headers['X-Tenant-ID'] = tenantId;
+
+    const res = await fetch(`${API_BASE}/api/v1/admin/invoices/${id}/thermal-receipt?width=${width}`, { headers });
+    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+    return res.text();
   }
 }

@@ -31,5 +31,15 @@ public class CreateProductRequest {
 
     private String category;
 
+    private String hsnSac;
+
+    private BigDecimal gstRate;
+
+    private String barcode;
+
+    private String unit;
+
+    private BigDecimal purchasePrice;
+
     private String status; // ACTIVE, OUT_OF_STOCK, DRAFT
 }

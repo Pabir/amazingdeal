@@ -16,6 +16,15 @@ export interface Tenant {
   storeTimings?: string;
   bannerUrl?: string;
   logoUrl?: string;
+  gstin?: string;
+  pan?: string;
+  stateCode?: string;
+  invoicePrefix?: string;
+  invoiceTerms?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankIfsc?: string;
+  bankBranch?: string;
 }
 
 export interface Product {
@@ -29,8 +38,88 @@ export interface Product {
   imageUrl?: string;
   imagesJson?: string;
   category?: string;
+  hsnSac?: string;
+  gstRate?: number;
+  barcode?: string;
+  unit?: string;
+  purchasePrice?: number;
   status: 'ACTIVE' | 'OUT_OF_STOCK' | 'DRAFT';
   createdAt?: string;
+}
+
+export interface Party {
+  id: string;
+  partyType: 'CUSTOMER' | 'SUPPLIER' | 'BOTH';
+  partyName: string;
+  companyName?: string;
+  gstin?: string;
+  phone: string;
+  email?: string;
+  pan?: string;
+  billingAddress?: string;
+  billingStateCode?: string;
+  shippingAddress?: string;
+  openingBalance?: number;
+  openingBalanceType?: 'RECEIVABLE' | 'PAYABLE';
+  currentBalance: number; // positive = customer owes merchant (Lene Hain), negative = merchant owes supplier (Dene Hain)
+  creditLimit?: number;
+  creditPeriodDays?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface InvoiceItem {
+  productId?: string;
+  itemName: string;
+  hsnSac?: string;
+  quantity: number;
+  unit?: string;
+  unitPrice: number;
+  discountPct?: number;
+  gstRate?: number;
+  cgstRate?: number;
+  cgstAmount?: number;
+  sgstRate?: number;
+  sgstAmount?: number;
+  igstRate?: number;
+  igstAmount?: number;
+  totalAmount: number;
+}
+
+export interface Invoice {
+  id: string;
+  partyId?: string;
+  partyName: string;
+  partyPhone?: string;
+  partyGstin?: string;
+  partyAddress?: string;
+  documentType: 'TAX_INVOICE' | 'BILL_OF_SUPPLY' | 'ESTIMATE' | 'PROFORMA' | 'DELIVERY_CHALLAN' | 'PURCHASE_BILL' | 'CREDIT_NOTE' | 'DEBIT_NOTE';
+  invoiceNumber: string;
+  referenceNumber?: string;
+  invoiceDate: string;
+  dueDate?: string;
+  placeOfSupply: string;
+  isReverseCharge?: boolean;
+  subtotal: number;
+  discountType?: 'FIXED' | 'PERCENTAGE';
+  discountAmount?: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  cessAmount?: number;
+  roundOff: number;
+  totalAmount: number;
+  paidAmount: number;
+  balanceDue: number;
+  paymentStatus: 'PAID' | 'PARTIAL' | 'UNPAID';
+  paymentMode: 'CASH' | 'UPI' | 'CARD' | 'BANK_TRANSFER' | 'CHEQUE' | 'CREDIT';
+  channel?: 'POS_COUNTER' | 'ONLINE_STOREFRONT' | 'B2B_SALES';
+  onlineOrderId?: string;
+  items: InvoiceItem[];
+  notes?: string;
+  termsConditions?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface OrderItem {

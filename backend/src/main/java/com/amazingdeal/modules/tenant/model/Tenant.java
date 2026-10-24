@@ -54,6 +54,35 @@ public class Tenant {
     @Column(name = "store_address", columnDefinition = "TEXT")
     private String storeAddress;
 
+    @Column(name = "gstin", length = 15)
+    private String gstin; // Merchant 15-digit GSTIN
+
+    @Column(name = "pan", length = 10)
+    private String pan;
+
+    @Builder.Default
+    @Column(name = "state_code", length = 2)
+    private String stateCode = "07"; // 2-digit Indian State code e.g. "07" (Delhi), "27" (Maharashtra)
+
+    @Builder.Default
+    @Column(name = "invoice_prefix", length = 10)
+    private String invoicePrefix = "INV";
+
+    @Column(name = "invoice_terms", columnDefinition = "TEXT")
+    private String invoiceTerms;
+
+    @Column(name = "bank_name", length = 100)
+    private String bankName;
+
+    @Column(name = "bank_account_number", length = 50)
+    private String bankAccountNumber;
+
+    @Column(name = "bank_ifsc", length = 20)
+    private String bankIfsc;
+
+    @Column(name = "bank_branch", length = 100)
+    private String bankBranch;
+
     @Column(name = "upi_vpa", length = 100)
     private String upiVpa; // e.g. storename@okaxis / store@icici
 
