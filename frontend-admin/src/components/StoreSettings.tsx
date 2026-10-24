@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Tenant, ChatGptStatus } from '../types';
-import { QrCode, Truck, Clock, MapPin, Save, ShieldCheck, Sparkles, Key, CheckCircle2, Unlink, RefreshCw, ExternalLink } from 'lucide-react';
+import { QrCode, Truck, Clock, MapPin, Save, ShieldCheck, Sparkles, Key, CheckCircle2, Unlink, RefreshCw, ExternalLink, Check, Tag } from 'lucide-react';
 import { ApiService } from '../services/api';
+import { MASTER_STORE_CATEGORIES } from '../data/categoriesData';
 
 interface StoreSettingsProps {
   tenant: Tenant | null;
@@ -17,6 +18,14 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
   const [minOrderAmount, setMinOrderAmount] = useState(tenant?.minOrderAmount?.toString() || '0');
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState(tenant?.deliveryRadiusKm?.toString() || '5');
   const [storeTimings, setStoreTimings] = useState(tenant?.storeTimings || '8:00 AM - 10:00 PM');
+  
+  // Multi-Category Business State
+  const initialCats = tenant?.storeCategory 
+    ? tenant.storeCategory.split(',').map((c) => c.trim()).filter(Boolean)
+    : ['Daily Essentials & Groceries'];
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCats);
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
+
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   // AI & Multi-Provider State
@@ -220,6 +229,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
     onSave({
       storeName,
       storeAddress,
+      storeCategory: selectedCategories.length > 0 ? selectedCategories.join(', ') : 'Daily Essentials & Groceries',
       upiVpa,
       deliveryCharge: parseFloat(deliveryCharge) || 0,
       freeDeliveryAbove: parseFloat(freeDeliveryAbove) || 0,
@@ -555,6 +565,107 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                 onChange={(e) => setStoreName(e.target.value)}
                 className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
               />
+            </div>
+
+            {/* Business Verticals & Multi-Category Selector */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Store Business Categories (Select 1 or more)</span>
+                  </label>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Choose all verticals you sell. Powers AI vision prompts and catalog auto-suggestions.
+                  </p>
+                </div>
+                <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  {selectedCategories.length} Active
+                </span>
+              </div>
+
+              {/* Category Search */}
+              <input
+                type="text"
+                placeholder="Search categories (e.g. Groceries, Dairy, Apparel, Tech, Toys)..."
+                value={categorySearchQuery}
+                onChange={(e) => setCategorySearchQuery(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              />
+
+              {/* Grid of categories */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                {MASTER_STORE_CATEGORIES.filter((c) =>
+                  categorySearchQuery
+                    ? c.name.toLowerCase().includes(categorySearchQuery.toLowerCase()) ||
+                      c.tagline.toLowerCase().includes(categorySearchQuery.toLowerCase())
+                    : true
+                ).map((cat) => {
+                  const isSelected = selectedCategories.includes(cat.name);
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategories((prev) => {
+                          if (isSelected) {
+                            if (prev.length === 1) return prev; // keep at least 1
+                            return prev.filter((c) => c !== cat.name);
+                          } else {
+                            return [...prev, cat.name];
+                          }
+                        });
+                      }}
+                      className={`p-2.5 rounded-xl border text-left transition-all flex items-start gap-2.5 ${
+                        isSelected
+                          ? 'bg-emerald-50 border-emerald-400 text-slate-900 shadow-sm'
+                          : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center border shrink-0 ${
+                          isSelected
+                            ? 'bg-emerald-600 border-emerald-600 text-white'
+                            : 'border-slate-300 bg-slate-50'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-bold leading-tight block truncate text-slate-900">
+                          {cat.name}
+                        </span>
+                        <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">
+                          {cat.tagline}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active Pills */}
+              {selectedCategories.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {selectedCategories.map((name) => (
+                    <span
+                      key={name}
+                      className="inline-flex items-center gap-1 text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300"
+                    >
+                      <span>{name}</span>
+                      {selectedCategories.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCategories((prev) => prev.filter((c) => c !== name))}
+                          className="hover:text-emerald-950 font-black ml-0.5"
+                        >
+                          &times;
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>

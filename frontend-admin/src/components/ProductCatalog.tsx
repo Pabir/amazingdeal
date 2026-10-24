@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
-import { Plus, Search, Check, AlertCircle, Trash2, Edit3, Image as ImageIcon, Sparkles, RotateCw } from 'lucide-react';
+import { Plus, Search, Check, AlertCircle, Trash2, Edit3, Image as ImageIcon, Sparkles, RotateCw, Zap, Tag, ChevronDown } from 'lucide-react';
 import { ApiService } from '../services/api';
 import { AiProductScannerModal } from './AiProductScannerModal';
+import { CatalogItemSuggestion, getItemsForCategories, searchCatalogSuggestions, MASTER_STORE_CATEGORIES } from '../data/categoriesData';
 
 interface ProductCatalogProps {
   products: Product[];
   onRefresh: () => void;
+  storeCategory?: string;
 }
 
-export const ProductCatalog: React.FC<ProductCatalogProps> = ({ products, onRefresh }) => {
+export const ProductCatalog: React.FC<ProductCatalogProps> = ({ products, onRefresh, storeCategory }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -24,6 +26,24 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ products, onRefr
   const [category, setCategory] = useState('Groceries');
   const [imageUrl, setImageUrl] = useState('');
   const [inventoryQuantity, setInventoryQuantity] = useState('50');
+
+  // Smart Catalog & Autocomplete State
+  const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
+  const [quickCategoryFilter, setQuickCategoryFilter] = useState('ALL');
+
+  // Pre-load items matching the merchant's store verticals
+  const storeItemPool = getItemsForCategories(storeCategory);
+  const matchingTitleSuggestions = searchCatalogSuggestions(title, storeCategory);
+
+  const handleSelectSuggestedItem = (item: CatalogItemSuggestion) => {
+    setTitle(item.title);
+    setCategory(item.category);
+    setPrice(item.price.toString());
+    setComparePrice(item.comparePrice ? item.comparePrice.toString() : '');
+    setDescription(item.description);
+    setImageUrl(item.imageUrl);
+    setShowTitleSuggestions(false);
+  };
 
   const categories = Array.from(
     new Set(products.map((p) => p.category).filter(Boolean) as string[])
@@ -258,7 +278,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ products, onRefr
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-extrabold text-slate-900 text-lg">Add Product to Catalog</h3>
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-lg">Add Product to Catalog</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Pick from standard items below or type to search our instant catalog bank.
+                </p>
+              </div>
               <button
                 onClick={() => setShowAddModal(false)}
                 className="text-slate-400 hover:text-slate-600 text-sm font-bold"
@@ -267,19 +292,115 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ products, onRefr
               </button>
             </div>
 
+            {/* Quick Pick Popular Items for Store Category */}
+            <div className="p-3 bg-gradient-to-br from-emerald-50/80 to-teal-50/50 rounded-xl border border-emerald-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-emerald-600 fill-emerald-600" />
+                  <span>Popular Quick-Pick Items ({storeCategory || 'All Verticals'}):</span>
+                </span>
+                <span className="text-[10px] text-emerald-700 font-medium">Click to 1-tap fill</span>
+              </div>
+
+              {/* Horizontal Scroll Chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full custom-scrollbar">
+                {storeItemPool.slice(0, 10).map((item, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSelectSuggestedItem(item)}
+                    className="shrink-0 text-left px-2.5 py-1.5 rounded-lg bg-white border border-emerald-200/80 hover:border-emerald-500 hover:bg-emerald-50 text-slate-800 transition-all text-xs shadow-xs group"
+                  >
+                    <div className="font-semibold truncate max-w-[170px] group-hover:text-emerald-700">
+                      {item.title}
+                    </div>
+                    <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
+                      <span className="font-bold text-emerald-600">₹{item.price}</span>
+                      <span>•</span>
+                      <span className="truncate">{item.category}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <form onSubmit={handleCreateProduct} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Product Title *
-                </label>
+              
+              {/* Product Title with Smart Instant Autocomplete */}
+              <div className="relative">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Product Title *
+                  </label>
+                  <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    <span>Auto-suggests from catalog</span>
+                  </span>
+                </div>
+
                 <input
                   type="text"
                   required
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Amul Butter (500g)"
+                  onFocus={() => setShowTitleSuggestions(true)}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    setShowTitleSuggestions(true);
+                  }}
+                  placeholder="Type item name (e.g. Atta, Milk, T-Shirt, Earbuds, Oil)..."
                   className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
+
+                {/* Autocomplete Dropdown Popover */}
+                {showTitleSuggestions && matchingTitleSuggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-200 z-50 max-h-56 overflow-y-auto divide-y divide-slate-100">
+                    <div className="p-2 bg-slate-50 text-[11px] font-bold text-slate-500 flex items-center justify-between">
+                      <span>Matching Standard Catalog Items:</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowTitleSuggestions(false)}
+                        className="text-slate-400 hover:text-slate-600"
+                      >
+                        ✕ Close
+                      </button>
+                    </div>
+                    {matchingTitleSuggestions.map((item, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectSuggestedItem(item)}
+                        className="w-full p-2.5 text-left hover:bg-emerald-50/80 transition-colors flex items-center gap-3"
+                      >
+                        {item.imageUrl && (
+                          <img
+                            src={item.imageUrl}
+                            alt=""
+                            className="w-9 h-9 rounded-lg object-cover border border-slate-100 shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-slate-900 truncate">
+                            {item.title}
+                          </div>
+                          <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                            <span className="font-extrabold text-emerald-600">₹{item.price}</span>
+                            {item.comparePrice && (
+                              <span className="line-through text-slate-400 text-[10px]">
+                                ₹{item.comparePrice}
+                              </span>
+                            )}
+                            <span className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0.2 rounded font-medium">
+                              {item.category}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-[11px] text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200 shrink-0">
+                          Fill ➔
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -321,9 +442,26 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ products, onRefr
                     type="text"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    placeholder="Dairy, Snacks, Staples..."
+                    placeholder="Dairy, Grains, Apparel, Tech..."
                     className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   />
+                  {/* Category Quick Chips */}
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {['Grains & Flours', 'Cooking Oils', 'Dairy & Milk', 'Beverages', 'Instant Food', 'Men Fashion', 'Audio & Tech'].map((catChip) => (
+                      <button
+                        key={catChip}
+                        type="button"
+                        onClick={() => setCategory(catChip)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md border transition-all ${
+                          category === catChip
+                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {catChip}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">

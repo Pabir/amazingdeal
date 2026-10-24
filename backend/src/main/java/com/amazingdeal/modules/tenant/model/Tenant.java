@@ -48,8 +48,8 @@ public class Tenant {
     @Column(name = "status", nullable = false, length = 20)
     private String status = "ACTIVE"; // ACTIVE, SUSPENDED, TRIAL
 
-    @Column(name = "store_category", length = 100)
-    private String storeCategory; // Groceries, Apparel, Sweets, Hardware, etc.
+    @Column(name = "store_category", length = 1000)
+    private String storeCategory; // Supports multi-category comma-separated: e.g. "Groceries, Apparel, Dairy & Bakery"
 
     @Column(name = "store_address", columnDefinition = "TEXT")
     private String storeAddress;

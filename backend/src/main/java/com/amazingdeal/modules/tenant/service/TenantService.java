@@ -184,6 +184,7 @@ public class TenantService {
     public Tenant updateSettings(UUID tenantId, Tenant updatedInfo) {
         Tenant tenant = getTenantById(tenantId);
         if (updatedInfo.getStoreName() != null) tenant.setStoreName(updatedInfo.getStoreName());
+        if (updatedInfo.getStoreCategory() != null) tenant.setStoreCategory(updatedInfo.getStoreCategory());
         if (updatedInfo.getUpiVpa() != null) tenant.setUpiVpa(updatedInfo.getUpiVpa());
         if (updatedInfo.getDeliveryRadiusKm() != null) tenant.setDeliveryRadiusKm(updatedInfo.getDeliveryRadiusKm());
         if (updatedInfo.getDeliveryCharge() != null) tenant.setDeliveryCharge(updatedInfo.getDeliveryCharge());

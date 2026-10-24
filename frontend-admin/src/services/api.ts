@@ -125,6 +125,13 @@ export class ApiService {
     return this.request<Tenant>('/api/v1/auth/me');
   }
 
+  public static async updateSettings(settings: Partial<Tenant>): Promise<Tenant> {
+    return this.request<Tenant>('/api/v1/auth/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
   // Products
   public static async getProducts(): Promise<Product[]> {
     return this.request<Product[]>('/api/v1/admin/products');

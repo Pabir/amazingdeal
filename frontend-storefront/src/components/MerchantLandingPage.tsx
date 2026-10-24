@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { StoreApi } from '../services/storeApi';
 import { SubscriptionPlan, SubscriptionPlanId, MerchantAuthResponse } from '../types';
+import { MASTER_STORE_CATEGORIES } from '../data/categoriesData';
 
 const PLANS: SubscriptionPlan[] = [
   {
@@ -127,8 +128,9 @@ export function MerchantLandingPage() {
   const [paymentVerified, setPaymentVerified] = useState<boolean>(false);
   const [paymentRef, setPaymentRef] = useState<string>('');
 
-  // Step 3: Store Configuration
-  const [storeCategory, setStoreCategory] = useState<string>('Daily Essentials & Groceries');
+  // Step 3: Store Configuration (Supports Multi-Category Businesses)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['Daily Essentials & Groceries']);
+  const [categorySearchQuery, setCategorySearchQuery] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [storeAddress, setStoreAddress] = useState<string>('');
   const [upiVpa, setUpiVpa] = useState<string>('');
@@ -421,7 +423,7 @@ export function MerchantLandingPage() {
         ownerPhone: ownerPhone.trim(),
         ownerEmail: ownerEmail.trim().toLowerCase(),
         password,
-        storeCategory,
+        storeCategory: selectedCategories.length > 0 ? selectedCategories.join(', ') : 'Daily Essentials & Groceries',
         storeAddress: storeAddress.trim(),
         upiVpa: cleanVpa,
         subscriptionPlan: selectedPlan.id,
@@ -1234,22 +1236,102 @@ export function MerchantLandingPage() {
 
                 <div className="space-y-3 pt-2">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Store Category</label>
-                    <select
-                      value={storeCategory}
-                      onChange={(e) => setStoreCategory(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-emerald-500"
-                    >
-                      <option>Daily Essentials & Groceries</option>
-                      <option>Supermarket & Hypermarket</option>
-                      <option>Fruits & Fresh Vegetables</option>
-                      <option>Dairy, Milk & Bakery</option>
-                      <option>Organic & Gourmet Foods</option>
-                      <option>Pharmacy & Wellness</option>
-                      <option>Electronics & Gadgets</option>
-                      <option>Apparel & Fashion</option>
-                      <option>General Retail Store</option>
-                    </select>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-semibold text-slate-300">
+                        Store Business Categories (Select 1 or more)
+                      </label>
+                      <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                        {selectedCategories.length} selected
+                      </span>
+                    </div>
+
+                    {/* Category Search Filter */}
+                    <input
+                      type="text"
+                      placeholder="Search categories (e.g. Groceries, Dairy, Apparel, Tech)..."
+                      value={categorySearchQuery}
+                      onChange={(e) => setCategorySearchQuery(e.target.value)}
+                      className="w-full mb-2.5 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-xs focus:outline-none focus:border-emerald-500"
+                    />
+
+                    {/* Multi-Select Category Badges */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
+                      {MASTER_STORE_CATEGORIES.filter((c) =>
+                        categorySearchQuery
+                          ? c.name.toLowerCase().includes(categorySearchQuery.toLowerCase()) ||
+                            c.tagline.toLowerCase().includes(categorySearchQuery.toLowerCase())
+                          : true
+                      ).map((cat) => {
+                        const isSelected = selectedCategories.includes(cat.name);
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCategories((prev) => {
+                                if (isSelected) {
+                                  // Keep at least one selected
+                                  if (prev.length === 1) return prev;
+                                  return prev.filter((item) => item !== cat.name);
+                                } else {
+                                  return [...prev, cat.name];
+                                }
+                              });
+                            }}
+                            className={`p-2.5 rounded-xl border text-left transition-all flex items-start gap-2.5 group ${
+                              isSelected
+                                ? 'bg-emerald-500/15 border-emerald-500/50 text-white shadow-sm shadow-emerald-500/10'
+                                : 'bg-slate-950/60 border-slate-800/80 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                            }`}
+                          >
+                            <div
+                              className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center border shrink-0 transition-colors ${
+                                isSelected
+                                  ? 'bg-emerald-500 border-emerald-400 text-slate-950'
+                                  : 'border-slate-700 bg-slate-900 group-hover:border-slate-500'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-bold leading-tight truncate">
+                                  {cat.name}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">
+                                {cat.tagline}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Selected Summary Pill Bar */}
+                    {selectedCategories.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {selectedCategories.map((catName) => (
+                          <span
+                            key={catName}
+                            className="inline-flex items-center gap-1 text-[10px] bg-emerald-500/20 text-emerald-300 font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30"
+                          >
+                            <span>{catName}</span>
+                            {selectedCategories.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSelectedCategories((prev) => prev.filter((c) => c !== catName))
+                                }
+                                className="hover:text-white"
+                              >
+                                &times;
+                              </button>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div>

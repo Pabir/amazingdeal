@@ -284,6 +284,12 @@ Deliver To: ${order.deliveryAddress}
   const handleSaveSettings = async (updated: Partial<Tenant>) => {
     setTenant((prev) => (prev ? { ...prev, ...updated } : null));
     if (updated.storeName) localStorage.setItem('ad_store_name', updated.storeName);
+    try {
+      const persisted = await ApiService.updateSettings(updated);
+      if (persisted) setTenant(persisted);
+    } catch (err: any) {
+      console.warn('Could not persist settings to server:', err.message);
+    }
   };
 
   const handleLogout = () => {
@@ -341,7 +347,7 @@ Deliver To: ${order.deliveryAddress}
         )}
 
         {activeTab === 'products' && (
-          <ProductCatalog products={products} onRefresh={loadData} />
+          <ProductCatalog products={products} onRefresh={loadData} storeCategory={tenant?.storeCategory} />
         )}
 
         {activeTab === 'settings' && (

@@ -56,4 +56,14 @@ public class AuthController {
         Tenant tenant = tenantService.getTenantById(tenantId);
         return ResponseEntity.ok(tenant);
     }
+
+    @PutMapping("/settings")
+    public ResponseEntity<?> updateSettings(@RequestBody Tenant updatedInfo) {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "No tenant context found"));
+        }
+        Tenant saved = tenantService.updateSettings(tenantId, updatedInfo);
+        return ResponseEntity.ok(saved);
+    }
 }
