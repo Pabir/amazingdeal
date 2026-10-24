@@ -27,4 +27,30 @@ public class StoreInfoDto {
     private String storeTimings;
     private String bannerUrl;
     private String logoUrl;
+
+    // Payment Gateway & Receive options
+    private String paymentModesJson;
+    private String customUpiQrUrl;
+    private Boolean razorpayByokEnabled;
+    private String razorpayKeyId;
+    private Boolean cashfreeByokEnabled;
+    private String cashfreeAppId;
+    private Boolean codEnabled;
+    private BigDecimal codExtraCharge;
+    private BigDecimal codMinAmount;
+    private BigDecimal codMaxAmount;
+    private Boolean codOtpRequired;
+
+    // Delivery & Logistics options
+    private String deliveryModesJson;
+    private String allowedPincodesText;
+    private String distanceTiersJson;
+    private String deliveryTimeSlotsJson;
+    private Boolean expressDeliveryEnabled;
+    private Integer expressDeliveryMinutes;
+    private BigDecimal expressDeliveryFee;
+    private Boolean shiprocketEnabled;
+    private String shiprocketPricingRule;
+    private BigDecimal shiprocketFlatFee;
+    private BigDecimal shiprocketFreeAbove;
 }

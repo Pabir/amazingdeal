@@ -25,6 +25,39 @@ export interface Tenant {
   bankAccountNumber?: string;
   bankIfsc?: string;
   bankBranch?: string;
+
+  // Payment BYOK & Gateway
+  paymentModesJson?: string;
+  customUpiQrUrl?: string;
+  razorpayByokEnabled?: boolean;
+  razorpayKeyId?: string;
+  hasRazorpaySecret?: boolean;
+  razorpayKeySecret?: string;
+  cashfreeByokEnabled?: boolean;
+  cashfreeAppId?: string;
+  cashfreeSecretKey?: string;
+  codEnabled?: boolean;
+  codExtraCharge?: number;
+  codMinAmount?: number;
+  codMaxAmount?: number;
+  codOtpRequired?: boolean;
+
+  // Delivery & Logistics
+  deliveryModesJson?: string;
+  allowedPincodesText?: string;
+  distanceTiersJson?: string;
+  deliveryTimeSlotsJson?: string;
+  expressDeliveryEnabled?: boolean;
+  expressDeliveryMinutes?: number;
+  expressDeliveryFee?: number;
+  shiprocketEnabled?: boolean;
+  shiprocketEmail?: string;
+  hasShiprocketPassword?: boolean;
+  shiprocketPassword?: string;
+  shiprocketPickupLocation?: string;
+  shiprocketPricingRule?: string;
+  shiprocketFlatFee?: number;
+  shiprocketFreeAbove?: number;
 }
 
 export interface Product {
@@ -143,8 +176,25 @@ export interface Order {
   orderStatus: 'PLACED' | 'ACCEPTED' | 'PACKED' | 'OUT_FOR_DELIVERY' | 'READY_FOR_PICKUP' | 'DELIVERED' | 'CANCELLED';
   totalAmount: number;
   deliveryCharge: number;
+  codExtraCharge?: number;
   items: OrderItem[];
   notes?: string;
+  pincode?: string;
+  expectedDeliveryDate?: string;
+  deliveryTimeSlot?: string;
+  deliveryBoyName?: string;
+  deliveryBoyPhone?: string;
+  fulfillmentPartner?: string;
+  shiprocketOrderId?: string;
+  shiprocketShipmentId?: string;
+  shiprocketAwbCode?: string;
+  shiprocketCourierName?: string;
+  shippingLabelUrl?: string;
+  courierTrackingUrl?: string;
+  gatewayProvider?: string;
+  gatewayPaymentId?: string;
+  gatewayOrderId?: string;
+  codOtpVerified?: boolean;
   createdAt: string;
 }
 

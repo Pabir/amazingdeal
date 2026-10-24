@@ -37,4 +37,25 @@ public class OrderResponseDto {
     private String upiUri;
     private String upiQrBase64;
     private String upiVpa;
+
+    // Delivery & Shipping tracking
+    private String pincode;
+    private String expectedDeliveryDate;
+    private String deliveryTimeSlot;
+    private String deliveryBoyName;
+    private String deliveryBoyPhone;
+    private String fulfillmentPartner;
+    private String shiprocketOrderId;
+    private String shiprocketShipmentId;
+    private String shiprocketAwbCode;
+    private String shiprocketCourierName;
+    private String shippingLabelUrl;
+    private String courierTrackingUrl;
+
+    // Gateway / COD details
+    private String gatewayProvider;
+    private String gatewayPaymentId;
+    private String gatewayOrderId;
+    private BigDecimal codExtraCharge;
+    private Boolean codOtpVerified;
 }

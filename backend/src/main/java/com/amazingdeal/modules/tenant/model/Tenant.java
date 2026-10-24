@@ -150,6 +150,117 @@ public class Tenant {
     @Column(name = "ai_provider_preference", length = 20)
     private String aiProviderPreference = "AUTO"; // AUTO, GEMINI, OPENAI
 
+    // ==========================================
+    // Payment Gateways & Merchant BYOK Settings
+    // ==========================================
+    @Column(name = "payment_modes_json", columnDefinition = "TEXT")
+    private String paymentModesJson; // e.g. ["UPI_DIRECT","RAZORPAY_BYOK","COD","STORE_PICKUP"]
+
+    @Column(name = "custom_upi_qr_url", length = 500)
+    private String customUpiQrUrl; // Hosted URL for merchant's printed QR sticker
+
+    @Builder.Default
+    @Column(name = "razorpay_byok_enabled")
+    private Boolean razorpayByokEnabled = false;
+
+    @Column(name = "razorpay_key_id", length = 100)
+    private String razorpayKeyId;
+
+    @Column(name = "razorpay_key_secret_enc", columnDefinition = "TEXT")
+    private String razorpayKeySecretEnc;
+
+    @Column(name = "razorpay_webhook_secret_enc", columnDefinition = "TEXT")
+    private String razorpayWebhookSecretEnc;
+
+    @Builder.Default
+    @Column(name = "cashfree_byok_enabled")
+    private Boolean cashfreeByokEnabled = false;
+
+    @Column(name = "cashfree_app_id", length = 100)
+    private String cashfreeAppId;
+
+    @Column(name = "cashfree_secret_key_enc", columnDefinition = "TEXT")
+    private String cashfreeSecretKeyEnc;
+
+    @Builder.Default
+    @Column(name = "cod_enabled")
+    private Boolean codEnabled = true;
+
+    @Builder.Default
+    @Column(name = "cod_extra_charge", precision = 10, scale = 2)
+    private BigDecimal codExtraCharge = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "cod_min_amount", precision = 10, scale = 2)
+    private BigDecimal codMinAmount = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "cod_max_amount", precision = 10, scale = 2)
+    private BigDecimal codMaxAmount = BigDecimal.valueOf(10000.0);
+
+    @Builder.Default
+    @Column(name = "cod_otp_required")
+    private Boolean codOtpRequired = false;
+
+    // ==========================================
+    // Delivery Engine & Logistics Settings
+    // ==========================================
+    @Column(name = "delivery_modes_json", columnDefinition = "TEXT")
+    private String deliveryModesJson; // e.g. ["OWN_FLEET","SHIPROCKET","STORE_PICKUP"]
+
+    @Column(name = "allowed_pincodes_text", columnDefinition = "TEXT")
+    private String allowedPincodesText; // Whitelisted comma/newline separated pincodes
+
+    @Column(name = "distance_tiers_json", columnDefinition = "TEXT")
+    private String distanceTiersJson; // JSON array: [{"minKm":0,"maxKm":3,"fee":20},{"minKm":3,"maxKm":7,"fee":40}]
+
+    @Column(name = "delivery_time_slots_json", columnDefinition = "TEXT")
+    private String deliveryTimeSlotsJson; // JSON array: ["Today (5 PM - 8 PM)","Tomorrow Morning (9 AM - 12 PM)"]
+
+    @Builder.Default
+    @Column(name = "express_delivery_enabled")
+    private Boolean expressDeliveryEnabled = false;
+
+    @Builder.Default
+    @Column(name = "express_delivery_minutes")
+    private Integer expressDeliveryMinutes = 60;
+
+    @Builder.Default
+    @Column(name = "express_delivery_fee", precision = 10, scale = 2)
+    private BigDecimal expressDeliveryFee = BigDecimal.valueOf(49.0);
+
+    // Shiprocket BYOK
+    @Builder.Default
+    @Column(name = "shiprocket_enabled")
+    private Boolean shiprocketEnabled = false;
+
+    @Column(name = "shiprocket_email", length = 150)
+    private String shiprocketEmail;
+
+    @Column(name = "shiprocket_password_enc", columnDefinition = "TEXT")
+    private String shiprocketPasswordEnc;
+
+    @Column(name = "shiprocket_token_cache", columnDefinition = "TEXT")
+    private String shiprocketTokenCache;
+
+    @Column(name = "shiprocket_token_expires_at")
+    private Instant shiprocketTokenExpiresAt;
+
+    @Column(name = "shiprocket_pickup_location", length = 100)
+    private String shiprocketPickupLocation;
+
+    @Builder.Default
+    @Column(name = "shiprocket_pricing_rule", length = 50)
+    private String shiprocketPricingRule = "FLAT_FEE"; // FLAT_FEE, PASS_THROUGH, FREE_ABOVE
+
+    @Builder.Default
+    @Column(name = "shiprocket_flat_fee", precision = 10, scale = 2)
+    private BigDecimal shiprocketFlatFee = BigDecimal.valueOf(60.0);
+
+    @Builder.Default
+    @Column(name = "shiprocket_free_above", precision = 10, scale = 2)
+    private BigDecimal shiprocketFreeAbove = BigDecimal.valueOf(999.0);
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;

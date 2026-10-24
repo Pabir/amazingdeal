@@ -125,13 +125,6 @@ export class ApiService {
     return this.request<Tenant>('/api/v1/auth/me');
   }
 
-  public static async updateSettings(settings: Partial<Tenant>): Promise<Tenant> {
-    return this.request<Tenant>('/api/v1/auth/settings', {
-      method: 'PUT',
-      body: JSON.stringify(settings),
-    });
-  }
-
   // Products
   public static async getProducts(): Promise<Product[]> {
     return this.request<Product[]>('/api/v1/admin/products');
@@ -366,5 +359,58 @@ export class ApiService {
     const res = await fetch(`${API_BASE}/api/v1/admin/invoices/${id}/thermal-receipt?width=${width}`, { headers });
     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
     return res.text();
+  }
+
+  // Settings & Gateway BYOK / Logistics
+  public static async getSettings(): Promise<any> {
+    return this.request<any>('/api/v1/admin/settings');
+  }
+
+  public static async updateSettings(data: any): Promise<Tenant> {
+    return this.request<Tenant>('/api/v1/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  public static async testRazorpay(keyId: string, keySecret: string): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>('/api/v1/admin/settings/test-razorpay', {
+      method: 'POST',
+      body: JSON.stringify({ keyId, keySecret }),
+    });
+  }
+
+  public static async testShiprocket(email: string, password: string): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>('/api/v1/admin/settings/test-shiprocket', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
+  // Logistics & Order Fulfillment
+  public static async shipViaShiprocket(orderId: string): Promise<{
+    success: boolean;
+    message: string;
+    awbCode: string;
+    courierName: string;
+    shippingLabelUrl: string;
+    order: Order;
+  }> {
+    return this.request<any>(`/api/v1/admin/orders/${orderId}/ship-shiprocket`, {
+      method: 'POST',
+    });
+  }
+
+  public static async assignStoreRider(orderId: string, riderName: string, riderPhone: string): Promise<{
+    success: boolean;
+    message: string;
+    whatsappDispatchText: string;
+    whatsappDispatchUrl: string;
+    order: Order;
+  }> {
+    return this.request<any>(`/api/v1/admin/orders/${orderId}/assign-rider`, {
+      method: 'POST',
+      body: JSON.stringify({ riderName, riderPhone }),
+    });
   }
 }

@@ -21,9 +21,23 @@ public class CreateOrderRequest {
     private String deliveryAddress;
 
     private String deliveryType = "DELIVERY"; // DELIVERY, PICKUP
-    private String paymentMethod = "COD"; // COD, UPI_ONLINE
+    private String paymentMethod = "COD"; // COD, UPI_ONLINE, RAZORPAY_BYOK
     private String notes;
     private java.util.UUID customerId;
+
+    // Delivery & Shipping options
+    private String pincode;
+    private String expectedDeliveryDate;
+    private String deliveryTimeSlot;
+    private String fulfillmentPartner; // OWN_RIDER, SHIPROCKET, STORE_PICKUP
+
+    // Gateway / Online payment details
+    private String gatewayProvider; // COD, DIRECT_UPI, RAZORPAY_BYOK, STORE_PICKUP
+    private String gatewayPaymentId;
+    private String gatewayOrderId;
+    private String gatewaySignature;
+    private String upiTransactionRef;
+    private String codOtp;
 
     @NotEmpty(message = "Order must have at least one product")
     private List<OrderItemDto> items;

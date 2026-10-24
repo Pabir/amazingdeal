@@ -524,6 +524,7 @@ ${invoice.balanceDue > 0 ? `Balance Due:         ₹${invoice.balanceDue.toFixed
             stats={stats}
             onUpdateStatus={handleUpdateStatus}
             onPrintReceipt={handlePrintReceipt}
+            onOrderUpdated={(updated) => setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)))}
           />
         )}
 

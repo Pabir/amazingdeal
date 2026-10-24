@@ -227,6 +227,33 @@ Traditional e-commerce platforms either charge exorbitant subscription fees, tak
 - **Document Conversion Engine:**
   - Full document lifecycle support: 1-click conversion from Estimates / Quotations (`ESTIMATE`) to official GST Tax Invoices (`TAX_INVOICE`).
 
+### 3.10. Payment Receiving & Merchant BYOK Architecture
+- **Bring-Your-Own-Key (BYOK) Payment Gateway:**
+  - Full support for merchant-owned Razorpay and Cashfree credentials.
+  - Client-side and server-side encryption at rest using AES-256-GCM (`AesCryptoUtil`).
+  - Dual execution modes: platform-level subscription billing vs tenant-level customer storefront checkout.
+  - Interactive "Test Razorpay Connection" API (`POST /api/v1/admin/settings/test-razorpay`) with live connection health badges.
+- **Direct Merchant UPI (0% Platform MDR):**
+  - Instant direct bank settlement without payment gateway fees.
+  - Dynamic QR code generation, click-to-pay deep links (GPay, PhonePe, Paytm, BHIM), and custom printed QR sticker URL uploads.
+- **Cash on Delivery (COD) Rules & Anti-Fraud Engine:**
+  - Configurable COD extra handling surcharge (e.g. ₹25 surcharge).
+  - Minimum order amount and maximum order amount safeguards to prevent high-value fraud.
+  - OTP verification flag and pay-at-doorstep fulfillment workflows.
+
+### 3.11. Logistics Engine, Delivery Time Slots & Shiprocket BYOK
+- **Shiprocket Domestic Courier Integration (BYOK):**
+  - Live courier serviceability check across 29,000+ Indian pincodes (`POST /api/v1/store/shipping/check-serviceability`).
+  - Automated AWB generation and order dispatch (`POST /api/v1/admin/orders/{id}/ship-shiprocket`).
+  - Dynamic shipping label generation and real-time tracking links (BlueDart, Delhivery, DTDC, Shadowfax).
+  - Flexible merchant freight pricing rules: `FLAT_FEE`, `PASS_THROUGH`, and `FREE_ABOVE` order thresholds.
+  - Interactive "Test Shiprocket Connection" API with JWT token caching.
+- **Own Store Delivery Fleet & Rider Dispatch:**
+  - Hyperlocal radius configuration (km), standard delivery fee, free delivery threshold, and whitelisted pincode validator.
+  - **Expected Delivery Date (EDD) & Time Slot Selector:** Support for slots such as "Today Evening (5 PM - 8 PM)", "Tomorrow Morning (9 AM - 12 PM)", and "Rush Express Delivery (60 mins)".
+  - **Store Rider Dispatch Generator (`POST /api/v1/admin/orders/{id}/assign-rider`):** 1-tap WhatsApp dispatch link with customer address, Google Maps routing link, itemized summary, and exact cash-to-collect instructions.
+  - **Store Pickup (BOPIS):** Pay-on-counter / free customer pickup mode with store physical address.
+
 ---
 
 ## 4. Chronological Decision Log (With Exact Timestamps)
@@ -290,6 +317,7 @@ The following log documents every major architecture, infrastructure, and featur
 | **2026-10-24 15:25:00 +0530** | *Workspace* | **Feature: Multi-Category & Smart Catalog** | Expanded store categories to 18 exhaustive retail verticals. Implemented multi-category store registration and settings management (`store_category` expanded to 1000/TEXT). Created 150+ item catalog bank (`categoriesData.ts`) and built 1-tap Quick-Pick item bars and real-time Title autocomplete in the Product Catalog. |
 | **2026-10-24 16:20:00 +0530** | `f95bfe9` | **Cloudflare Deployment** | Identified that GitHub Actions edge deployment had been skipped due to unconfigured repository secrets. Configured custom domain route for `amazingdeal.co.in` in `frontend-storefront/wrangler.json`, deployed production builds for both `admin.amazingdeal.co.in` and `amazingdeal.co.in` via Cloudflare Wrangler, and verified live bundle delivery. |
 | **2026-10-24 18:25:00 +0530** | *Workspace* | **Feature: Vyapar ERP & POS Billing (Phase 1)** | Implemented Vyapar-grade POS counter billing, GST tax invoicing, and customer/supplier Khata ledgers. Added `Party` and `Invoice` entities extending `TenantAwareEntity`. Built state-based tax split engine (Intrastate CGST+SGST vs Interstate IGST), real-time inventory decrement, sequential invoice numbering, document conversion (`ESTIMATE` -> `TAX_INVOICE`), A4/A5 GST Tax Invoice modal with print/WhatsApp sharing, ESC/POS thermal receipt formatting, and 1-tap WhatsApp payment reminders. Verified with 6 end-to-end integration tests. |
+| **2026-10-24 21:50:00 +0530** | *Workspace* | **Feature: Payment Gateways (BYOK) & Logistics Engine (Shiprocket)** | Completed end-to-end merchant Payment and Delivery architecture. Implemented Razorpay BYOK with AES-256-GCM encrypted credentials, merchant-scoped order generation, signature verification, and live test connection validation. Built zero-MDR Direct Merchant UPI with custom QR sticker upload and Cash on Delivery (COD) with handling surcharges and min/max thresholds. Built domestic Shiprocket courier integration with automated AWB generation, shipping labels, and live pincode serviceability check. Added Store Fleet rider dispatch with 1-tap WhatsApp messages containing customer address, Google Maps link, and cash-to-collect alerts. Upgraded `StoreSettings.tsx` into a 5-tab studio, upgraded `OrderBoard.tsx` with 1-click Shiprocket and Rider dispatch, and upgraded storefront `CheckoutModal.tsx` with pincode serviceability, time slot selection, and BYOK payment flows. Verified with 6 live integration tests on Neon PostgreSQL. |
 
 ---
 

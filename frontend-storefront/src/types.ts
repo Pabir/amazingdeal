@@ -13,6 +13,32 @@ export interface StoreInfo {
   storeTimings?: string;
   bannerUrl?: string;
   logoUrl?: string;
+
+  // Payment Options
+  paymentModesJson?: string;
+  customUpiQrUrl?: string;
+  razorpayByokEnabled?: boolean;
+  razorpayKeyId?: string;
+  cashfreeByokEnabled?: boolean;
+  cashfreeAppId?: string;
+  codEnabled?: boolean;
+  codExtraCharge?: number;
+  codMinAmount?: number;
+  codMaxAmount?: number;
+  codOtpRequired?: boolean;
+
+  // Delivery & Logistics Options
+  deliveryModesJson?: string;
+  allowedPincodesText?: string;
+  distanceTiersJson?: string;
+  deliveryTimeSlotsJson?: string;
+  expressDeliveryEnabled?: boolean;
+  expressDeliveryMinutes?: number;
+  expressDeliveryFee?: number;
+  shiprocketEnabled?: boolean;
+  shiprocketPricingRule?: string;
+  shiprocketFlatFee?: number;
+  shiprocketFreeAbove?: number;
 }
 
 export interface Product {
@@ -40,11 +66,18 @@ export interface OrderResponse {
   customerPhone: string;
   deliveryAddress: string;
   deliveryType: 'DELIVERY' | 'PICKUP';
-  paymentMethod: 'COD' | 'UPI_ONLINE';
+  paymentMethod: 'COD' | 'UPI_ONLINE' | 'RAZORPAY_BYOK' | 'DIRECT_UPI';
   paymentStatus: 'PENDING' | 'PAID' | 'FAILED';
   orderStatus: string;
   totalAmount: number;
   deliveryCharge: number;
+  codExtraCharge?: number;
+  pincode?: string;
+  expectedDeliveryDate?: string;
+  deliveryTimeSlot?: string;
+  fulfillmentPartner?: string;
+  shiprocketAwbCode?: string;
+  shippingLabelUrl?: string;
   items: Array<{
     title: string;
     price: number;

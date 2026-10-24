@@ -83,10 +83,33 @@ public class OrderService {
                     .build());
         }
 
-        // Calculate delivery fee based on store rules
+        // 1. Calculate delivery fee based on store delivery mode & fulfillment partner
         BigDecimal deliveryCharge = BigDecimal.ZERO;
-        if ("DELIVERY".equalsIgnoreCase(request.getDeliveryType())) {
-            if (tenant.getFreeDeliveryAbove() != null && itemsTotal.compareTo(tenant.getFreeDeliveryAbove()) >= 0) {
+        String deliveryType = request.getDeliveryType() != null ? request.getDeliveryType().toUpperCase() : "DELIVERY";
+        String fulfillmentPartner = request.getFulfillmentPartner() != null ? request.getFulfillmentPartner().toUpperCase() : "OWN_RIDER";
+
+        if ("PICKUP".equalsIgnoreCase(deliveryType) || "STORE_PICKUP".equalsIgnoreCase(fulfillmentPartner)) {
+            deliveryCharge = BigDecimal.ZERO;
+            fulfillmentPartner = "STORE_PICKUP";
+        } else if ("SHIPROCKET".equalsIgnoreCase(fulfillmentPartner)) {
+            if ("FREE_ABOVE".equalsIgnoreCase(tenant.getShiprocketPricingRule()) &&
+                    tenant.getShiprocketFreeAbove() != null &&
+                    itemsTotal.compareTo(tenant.getShiprocketFreeAbove()) >= 0) {
+                deliveryCharge = BigDecimal.ZERO;
+            } else if (tenant.getShiprocketFlatFee() != null) {
+                deliveryCharge = tenant.getShiprocketFlatFee();
+            } else {
+                deliveryCharge = BigDecimal.valueOf(60.0);
+            }
+        } else {
+            // Own Fleet / Local Store Delivery
+            boolean isExpress = Boolean.TRUE.equals(tenant.getExpressDeliveryEnabled()) &&
+                    request.getDeliveryTimeSlot() != null &&
+                    request.getDeliveryTimeSlot().toLowerCase().contains("express");
+
+            if (isExpress) {
+                deliveryCharge = tenant.getExpressDeliveryFee() != null ? tenant.getExpressDeliveryFee() : BigDecimal.valueOf(49.0);
+            } else if (tenant.getFreeDeliveryAbove() != null && itemsTotal.compareTo(tenant.getFreeDeliveryAbove()) >= 0) {
                 deliveryCharge = BigDecimal.ZERO;
             } else if (tenant.getDeliveryCharge() != null) {
                 deliveryCharge = tenant.getDeliveryCharge();
@@ -95,7 +118,26 @@ public class OrderService {
             }
         }
 
-        BigDecimal grandTotal = itemsTotal.add(deliveryCharge);
+        // 2. Validate COD rules and compute COD surcharge if applicable
+        String paymentMethod = request.getPaymentMethod() != null ? request.getPaymentMethod().toUpperCase() : "COD";
+        BigDecimal codExtraCharge = BigDecimal.ZERO;
+
+        if ("COD".equalsIgnoreCase(paymentMethod)) {
+            if (tenant.getCodEnabled() != null && !tenant.getCodEnabled()) {
+                throw new IllegalArgumentException("Cash on Delivery (COD) is not enabled for this store.");
+            }
+            if (tenant.getCodMinAmount() != null && itemsTotal.compareTo(tenant.getCodMinAmount()) < 0) {
+                throw new IllegalArgumentException("Minimum order amount for COD is INR " + tenant.getCodMinAmount());
+            }
+            if (tenant.getCodMaxAmount() != null && itemsTotal.compareTo(tenant.getCodMaxAmount()) > 0) {
+                throw new IllegalArgumentException("Maximum order amount for COD is INR " + tenant.getCodMaxAmount());
+            }
+            if (tenant.getCodExtraCharge() != null && tenant.getCodExtraCharge().compareTo(BigDecimal.ZERO) > 0) {
+                codExtraCharge = tenant.getCodExtraCharge();
+            }
+        }
+
+        BigDecimal grandTotal = itemsTotal.add(deliveryCharge).add(codExtraCharge);
 
         // Generate friendly sequential/timestamped order number: e.g. #ORD-8492
         long count = orderRepository.countByTenantId(tenantId) + 1;
@@ -108,8 +150,10 @@ public class OrderService {
             itemsJson = "[]";
         }
 
-        String paymentMethod = request.getPaymentMethod() != null ? request.getPaymentMethod().toUpperCase() : "COD";
-        String initialPaymentStatus = "COD".equalsIgnoreCase(paymentMethod) ? "PENDING" : "PENDING";
+        String initialPaymentStatus = "PENDING";
+        if (request.getGatewayPaymentId() != null && !request.getGatewayPaymentId().isBlank()) {
+            initialPaymentStatus = "PAID";
+        }
 
         UUID customerId = request.getCustomerId();
         if (customerId == null) {
@@ -122,14 +166,24 @@ public class OrderService {
                 .customerName(request.getCustomerName().trim())
                 .customerPhone(request.getCustomerPhone().trim())
                 .deliveryAddress(request.getDeliveryAddress().trim())
-                .deliveryType(request.getDeliveryType() != null ? request.getDeliveryType().toUpperCase() : "DELIVERY")
+                .deliveryType(deliveryType)
                 .paymentMethod(paymentMethod)
                 .paymentStatus(initialPaymentStatus)
                 .orderStatus("PLACED")
                 .totalAmount(grandTotal)
                 .deliveryCharge(deliveryCharge)
+                .codExtraCharge(codExtraCharge)
                 .itemsJson(itemsJson)
                 .notes(request.getNotes())
+                .pincode(request.getPincode())
+                .expectedDeliveryDate(request.getExpectedDeliveryDate())
+                .deliveryTimeSlot(request.getDeliveryTimeSlot())
+                .fulfillmentPartner(fulfillmentPartner)
+                .gatewayProvider(request.getGatewayProvider() != null ? request.getGatewayProvider().toUpperCase() : paymentMethod)
+                .gatewayPaymentId(request.getGatewayPaymentId())
+                .gatewayOrderId(request.getGatewayOrderId())
+                .upiTransactionRef(request.getUpiTransactionRef())
+                .codOtpVerified(request.getCodOtp() != null && !request.getCodOtp().isBlank())
                 .build();
         order.setTenantId(tenantId);
 
@@ -138,8 +192,8 @@ public class OrderService {
         // Build response
         OrderResponseDto response = mapToDto(saved, tenant.getStoreName(), validatedItems);
 
-        // If UPI payment, generate UPI string and QR code
-        if ("UPI_ONLINE".equalsIgnoreCase(paymentMethod)) {
+        // If direct UPI payment, generate UPI string and QR code
+        if ("UPI_ONLINE".equalsIgnoreCase(paymentMethod) || "DIRECT_UPI".equalsIgnoreCase(paymentMethod)) {
             String upiUri = upiPaymentService.generateUpiUri(
                     tenant.getUpiVpa(),
                     tenant.getStoreName(),
@@ -154,8 +208,8 @@ public class OrderService {
             response.setUpiVpa(tenant.getUpiVpa());
         }
 
-        log.info("New Order created: {} for store: {} (Amount: INR {})", 
-                orderNumber, tenant.getStoreName(), grandTotal);
+        log.info("New Order created: {} for store: {} (Amount: INR {}, Method: {}, Delivery: {})", 
+                orderNumber, tenant.getStoreName(), grandTotal, paymentMethod, fulfillmentPartner);
 
         return response;
     }
@@ -289,8 +343,25 @@ public class OrderService {
                 .orderStatus(o.getOrderStatus())
                 .totalAmount(o.getTotalAmount())
                 .deliveryCharge(o.getDeliveryCharge())
+                .codExtraCharge(o.getCodExtraCharge())
                 .items(items)
                 .notes(o.getNotes())
+                .pincode(o.getPincode())
+                .expectedDeliveryDate(o.getExpectedDeliveryDate())
+                .deliveryTimeSlot(o.getDeliveryTimeSlot())
+                .deliveryBoyName(o.getDeliveryBoyName())
+                .deliveryBoyPhone(o.getDeliveryBoyPhone())
+                .fulfillmentPartner(o.getFulfillmentPartner())
+                .shiprocketOrderId(o.getShiprocketOrderId())
+                .shiprocketShipmentId(o.getShiprocketShipmentId())
+                .shiprocketAwbCode(o.getShiprocketAwbCode())
+                .shiprocketCourierName(o.getShiprocketCourierName())
+                .shippingLabelUrl(o.getShippingLabelUrl())
+                .courierTrackingUrl(o.getCourierTrackingUrl())
+                .gatewayProvider(o.getGatewayProvider())
+                .gatewayPaymentId(o.getGatewayPaymentId())
+                .gatewayOrderId(o.getGatewayOrderId())
+                .codOtpVerified(o.getCodOtpVerified())
                 .createdAt(o.getCreatedAt())
                 .build();
     }
