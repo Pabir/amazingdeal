@@ -266,6 +266,7 @@ The following log documents every major architecture, infrastructure, and featur
 | **2026-10-24 14:55:00 +0530** | *Workspace* | **Documentation** | Created master `gemini.md` context anchor file containing full project scope, tech stack inventory, built feature catalog, timestamped decision history, and AI maintenance protocol. |
 | **2026-10-24 15:10:00 +0530** | *Workspace* | **Architecture / Taxonomy** | Formalized and documented core store category verticals across onboarding, database, and storefront filters. |
 | **2026-10-24 15:25:00 +0530** | *Workspace* | **Feature: Multi-Category & Smart Catalog** | Expanded store categories to 18 exhaustive retail verticals. Implemented multi-category store registration and settings management (`store_category` expanded to 1000/TEXT). Created 150+ item catalog bank (`categoriesData.ts`) and built 1-tap Quick-Pick item bars and real-time Title autocomplete in the Product Catalog. |
+| **2026-10-24 16:20:00 +0530** | `f95bfe9` | **Cloudflare Deployment** | Identified that GitHub Actions edge deployment had been skipped due to unconfigured repository secrets. Configured custom domain route for `amazingdeal.co.in` in `frontend-storefront/wrangler.json`, deployed production builds for both `admin.amazingdeal.co.in` and `amazingdeal.co.in` via Cloudflare Wrangler, and verified live bundle delivery. |
 
 ---
 
