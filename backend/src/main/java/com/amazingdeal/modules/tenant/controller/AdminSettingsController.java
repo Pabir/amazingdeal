@@ -233,18 +233,30 @@ public class AdminSettingsController {
         String keySecret = body.get("keySecret");
 
         UUID tenantId = TenantContext.getTenantId();
-        if (tenantId != null && (keySecret == null || keySecret.isBlank() || MASKED.equals(keySecret))) {
+        if (tenantId != null) {
             Tenant t = tenantRepository.findById(tenantId).orElse(null);
-            if (t != null && t.getRazorpayKeySecretEnc() != null) {
-                keySecret = aesCryptoUtil.decrypt(t.getRazorpayKeySecretEnc());
+            if (t != null) {
+                if ((keyId == null || keyId.isBlank()) && t.getRazorpayKeyId() != null) {
+                    keyId = t.getRazorpayKeyId();
+                }
+                if ((keySecret == null || keySecret.isBlank() || MASKED.equals(keySecret)) && t.getRazorpayKeySecretEnc() != null) {
+                    keySecret = aesCryptoUtil.decrypt(t.getRazorpayKeySecretEnc());
+                }
             }
         }
 
-        boolean ok = razorpayService.testConnection(keyId, keySecret);
-        if (ok) {
-            return ResponseEntity.ok(Map.of("success", true, "message", "Razorpay credentials verified successfully! Live API connection confirmed."));
+        RazorpayService.RazorpayTestResult result = razorpayService.testConnectionDetailed(keyId, keySecret);
+        if (result.isSuccess()) {
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", result.getMessage(),
+                    "mode", result.getMode() != null ? result.getMode() : "LIVE"
+            ));
         } else {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Razorpay authentication failed. Please verify Key ID and Key Secret."));
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", result.getMessage()
+            ));
         }
     }
 

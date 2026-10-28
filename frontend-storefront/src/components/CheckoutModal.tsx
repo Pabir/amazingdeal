@@ -259,14 +259,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           customerPhone
         );
 
-        const options = {
+        const options: any = {
           key: rzpOrder.keyId,
           amount: rzpOrder.amountInPaise,
           currency: 'INR',
           name: store.storeName,
           description: `Order at ${store.storeName}`,
           image: store.logoUrl || undefined,
-          order_id: rzpOrder.orderId,
           prefill: {
             name: customerName,
             contact: customerPhone,
@@ -291,6 +290,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             },
           },
         };
+
+        if (rzpOrder.orderId && !rzpOrder.orderId.startsWith('order_mock_')) {
+          options.order_id = rzpOrder.orderId;
+        }
 
         const rzp = new (window as any).Razorpay(options);
         rzp.open();

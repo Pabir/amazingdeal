@@ -604,6 +604,16 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                 Accept Credit Cards, Debit Cards, Netbanking, EMIs, and Wallets directly through your own merchant Razorpay account. Your API keys are encrypted at rest with AES-256-GCM.
               </p>
 
+              <div className="p-3 bg-blue-100/70 border border-blue-200 rounded-xl text-xs text-blue-900 space-y-1">
+                <div className="font-bold flex items-center space-x-1.5">
+                  <span className="text-sm">🔑</span>
+                  <span>How to Get Your Razorpay API Keys</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-blue-800">
+                  Log into your <a href="https://dashboard.razorpay.com" target="_blank" rel="noopener noreferrer" className="underline font-bold">Razorpay Dashboard</a> ➔ <strong>Settings</strong> ➔ <strong>API Keys</strong> ➔ Click <strong>"Generate Key"</strong>. Use <code>rzp_test_...</code> for Sandbox testing or <code>rzp_live_...</code> to accept real payments from customers.
+                </p>
+              </div>
+
               {razorpayByokEnabled && (
                 <div className="space-y-4 pt-2">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
