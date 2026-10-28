@@ -41,6 +41,7 @@ public class ShiprocketService {
             .build();
 
     private static final String SHIPROCKET_BASE_URL = "https://apiv2.shiprocket.in/v1/external";
+    private static final String USER_AGENT = "AmazingDeal-Hyperlocal/1.0 (Java 21; Linux; E-Commerce Platform)";
 
     @Data
     @Builder
@@ -84,6 +85,7 @@ public class ShiprocketService {
                 .uri(URI.create(SHIPROCKET_BASE_URL + "/auth/login"))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
+                .header("User-Agent", USER_AGENT)
                 .timeout(Duration.ofSeconds(15))
                 .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                 .build();
@@ -99,7 +101,27 @@ public class ShiprocketService {
         }
 
         log.warn("Shiprocket auth failed: HTTP {} -> {}", response.statusCode(), response.body());
-        throw new IllegalStateException("Shiprocket authentication failed (Status " + response.statusCode() + "). Please check your Shiprocket API credentials.");
+
+        String errorDetail = "";
+        try {
+            JsonNode errRoot = objectMapper.readTree(response.body());
+            if (errRoot.has("message") && !errRoot.path("message").asText().isBlank()) {
+                errorDetail = ": " + errRoot.path("message").asText();
+            } else if (errRoot.has("error") && !errRoot.path("error").asText().isBlank()) {
+                errorDetail = ": " + errRoot.path("error").asText();
+            }
+        } catch (Exception ignored) {
+            if (response.body() != null && !response.body().isBlank()) {
+                String plain = response.body().replaceAll("<[^>]*>", "").replaceAll("\\s+", " ").trim();
+                if (plain.length() > 80) plain = plain.substring(0, 80) + "...";
+                if (!plain.isBlank()) errorDetail = ": " + plain;
+            }
+        }
+
+        if (response.statusCode() == 401 || response.statusCode() == 403) {
+            throw new IllegalStateException("Shiprocket authentication failed (Status " + response.statusCode() + errorDetail + "). Please ensure you are using a dedicated Shiprocket API User (Settings -> API -> Configure -> Create API User), NOT your main account login password.");
+        }
+        throw new IllegalStateException("Shiprocket authentication failed (Status " + response.statusCode() + errorDetail + "). Please check your Shiprocket API credentials.");
     }
 
     /**
@@ -173,6 +195,7 @@ public class ShiprocketService {
                     .uri(URI.create(url))
                     .header("Authorization", "Bearer " + token)
                     .header("Accept", "application/json")
+                    .header("User-Agent", USER_AGENT)
                     .timeout(Duration.ofSeconds(10))
                     .GET()
                     .build();
@@ -286,6 +309,7 @@ public class ShiprocketService {
                     .header("Authorization", "Bearer " + token)
                     .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
+                    .header("User-Agent", USER_AGENT)
                     .timeout(Duration.ofSeconds(20))
                     .POST(HttpRequest.BodyPublishers.ofString(reqJson))
                     .build();

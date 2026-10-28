@@ -633,23 +633,35 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2">
-                    <button
-                      type="button"
-                      disabled={testingRazorpay || !razorpayKeyId}
-                      onClick={handleTestRazorpay}
-                      className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      <span>{testingRazorpay ? 'Verifying Gateway...' : 'Test Razorpay Connection'}</span>
-                    </button>
+                  <div className="pt-2 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        disabled={testingRazorpay || !razorpayKeyId}
+                        onClick={handleTestRazorpay}
+                        className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>{testingRazorpay ? 'Verifying Gateway...' : 'Test Razorpay Connection'}</span>
+                      </button>
+
+                      {razorpayTestStatus && (
+                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                          razorpayTestStatus.success ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {razorpayTestStatus.success ? 'Gateway Verified' : 'Verification Failed'}
+                        </span>
+                      )}
+                    </div>
 
                     {razorpayTestStatus && (
-                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                        razorpayTestStatus.success ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                      <div className={`p-3 rounded-xl text-xs leading-relaxed border ${
+                        razorpayTestStatus.success
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                          : 'bg-rose-50 border-rose-200 text-rose-800'
                       }`}>
-                        {razorpayTestStatus.msg}
-                      </span>
+                        <p className="font-medium">{razorpayTestStatus.msg}</p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -868,30 +880,41 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                 Connect your Shiprocket account to ship pan-India across 29,000+ pincodes via BlueDart, Delhivery, DTDC, and Shadowfax. Generate 1-click AWB shipping labels directly from your Order Board.
               </p>
 
+              <div className="p-3 bg-purple-100/70 border border-purple-200 rounded-xl text-xs text-purple-900 space-y-1">
+                <div className="font-bold flex items-center space-x-1.5">
+                  <span className="text-sm">🔑</span>
+                  <span>Requires Dedicated Shiprocket API User</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-purple-800">
+                  Shiprocket requires dedicated <strong>API User</strong> credentials. Do not use your personal web login password.
+                  Generate credentials in your Shiprocket dashboard: <strong>Settings ➔ API ➔ Configure ➔ Create an API User</strong>.
+                </p>
+              </div>
+
               {shiprocketEnabled && (
                 <div className="space-y-4 pt-2">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Shiprocket Account Email
+                        Shiprocket API User Email
                       </label>
                       <input
                         type="email"
                         value={shiprocketEmail}
                         onChange={(e) => setShiprocketEmail(e.target.value)}
-                        placeholder="logistics@yourstore.com"
+                        placeholder="api-user@yourstore.com"
                         className="w-full px-3.5 py-2 bg-white border border-purple-300 rounded-xl text-sm"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Shiprocket API Password {hasShiprocketPassword && <span className="text-emerald-600">(Stored Securely)</span>}
+                        Shiprocket API User Password {hasShiprocketPassword && <span className="text-emerald-600">(Stored Securely)</span>}
                       </label>
                       <input
                         type="password"
                         value={shiprocketPassword}
                         onChange={(e) => setShiprocketPassword(e.target.value)}
-                        placeholder={hasShiprocketPassword ? '●●●●●●●● (Enter to update)' : 'Enter Shiprocket password'}
+                        placeholder={hasShiprocketPassword ? '●●●●●●●● (Enter to update)' : 'Enter API user password'}
                         className="w-full px-3.5 py-2 bg-white border border-purple-300 rounded-xl text-sm font-mono"
                       />
                     </div>
@@ -937,23 +960,35 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2">
-                    <button
-                      type="button"
-                      disabled={testingShiprocket || !shiprocketEmail}
-                      onClick={handleTestShiprocket}
-                      className="inline-flex items-center space-x-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      <span>{testingShiprocket ? 'Authenticating API...' : 'Test Shiprocket Connection'}</span>
-                    </button>
+                  <div className="pt-2 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        disabled={testingShiprocket || !shiprocketEmail}
+                        onClick={handleTestShiprocket}
+                        className="inline-flex items-center space-x-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>{testingShiprocket ? 'Authenticating API...' : 'Test Shiprocket Connection'}</span>
+                      </button>
+
+                      {shiprocketTestStatus && (
+                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                          shiprocketTestStatus.success ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {shiprocketTestStatus.success ? 'Connection Verified' : 'Authentication Failed'}
+                        </span>
+                      )}
+                    </div>
 
                     {shiprocketTestStatus && (
-                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                        shiprocketTestStatus.success ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                      <div className={`p-3 rounded-xl text-xs leading-relaxed border ${
+                        shiprocketTestStatus.success
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                          : 'bg-rose-50 border-rose-200 text-rose-800'
                       }`}>
-                        {shiprocketTestStatus.msg}
-                      </span>
+                        <p className="font-medium">{shiprocketTestStatus.msg}</p>
+                      </div>
                     )}
                   </div>
                 </div>

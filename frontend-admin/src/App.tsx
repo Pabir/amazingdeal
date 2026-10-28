@@ -288,6 +288,15 @@ export function App() {
   };
 
   useEffect(() => {
+    const handleSessionExpired = () => {
+      setIsAuthenticated(false);
+      setTenant(null);
+    };
+    window.addEventListener('ad_session_expired', handleSessionExpired);
+    return () => window.removeEventListener('ad_session_expired', handleSessionExpired);
+  }, []);
+
+  useEffect(() => {
     if (!isAuthenticated) return;
 
     // Load store profile from storage

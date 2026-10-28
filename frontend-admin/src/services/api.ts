@@ -50,13 +50,43 @@ export class ApiService {
     localStorage.removeItem('ad_upi_vpa');
   }
 
+  public static isTokenExpired(token: string | null): boolean {
+    if (!token) return true;
+    if (token.startsWith('demo-') || token === 'demo-token-123') return false;
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return false;
+      const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(payloadBase64));
+      if (!payload.exp) return false;
+      return payload.exp * 1000 < Date.now();
+    } catch {
+      return false;
+    }
+  }
+
   public static isAuthenticated(): boolean {
-    return !!this.getToken();
+    const token = this.getToken();
+    if (!token) return false;
+    if (this.isTokenExpired(token)) {
+      this.clearAuth();
+      return false;
+    }
+    return true;
   }
 
   private static async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = this.getToken();
     const tenantId = this.getTenantId();
+
+    // Check if the current stored token has expired prior to making authenticated requests
+    if (token && endpoint.startsWith('/api/v1/admin') && this.isTokenExpired(token)) {
+      this.clearAuth();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ad_session_expired'));
+      }
+      throw new Error('Your login session has expired. Please sign in again.');
+    }
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -77,6 +107,16 @@ export class ApiService {
       });
 
       if (!response.ok) {
+        if (response.status === 401 || (response.status === 403 && endpoint.startsWith('/api/v1/admin'))) {
+          if (this.isTokenExpired(token)) {
+            this.clearAuth();
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('ad_session_expired'));
+            }
+            throw new Error('Your login session has expired. Please sign in again.');
+          }
+        }
+
         let errMessage = `HTTP Error ${response.status}`;
         try {
           const errJson = await response.json();
@@ -88,6 +128,11 @@ export class ApiService {
         } catch {
           // ignore json parse error
         }
+
+        if ((response.status === 401 || response.status === 403) && (!errMessage || errMessage.toLowerCase() === 'forbidden')) {
+          errMessage = 'Access denied / session expired. Please log out and sign in again.';
+        }
+
         throw new Error(errMessage);
       }
 
