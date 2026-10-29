@@ -179,6 +179,10 @@ Traditional e-commerce platforms either charge exorbitant subscription fees, tak
   - `RazorpayTransaction` audit entity for tracking payment attempts and status updates.
 
 ### 3.7. Customer Authentication & Account Management
+- **Customer Authentication & Mandatory Checkout Guard:**
+  - Mandatory customer login enforced for all storefront orders (`POST /api/v1/store/orders`).
+  - Storefront UI blocks guest checkout in both `CartDrawer` and `CheckoutModal`; shoppers clicking checkout while unauthenticated are prompted with the `CustomerAuthModal` (Google 1-Tap or Mobile/Email OTP), automatically resuming directly to the populated checkout modal upon sign-in.
+  - Backend enforces defense-in-depth: both `StorefrontController` and `OrderService` validate customer identity and reject unauthenticated requests with `HTTP 401 Unauthorized`.
 - **Firebase Auth Integration:**
   - Storefront uses Firebase Web SDK 13.0.0 (Project: `amazingdeal-prod-2026-a1b2c`).
   - Google 1-Tap Sign-In popup and Phone SMS OTP.
@@ -190,7 +194,6 @@ Traditional e-commerce platforms either charge exorbitant subscription fees, tak
   - `CustomerAuthModal`: Google 1-tap sign-in and mobile login.
   - `SavedAddressesModal`: Add, edit, select, and delete delivery addresses.
   - `MyOrdersModal`: View real-time tracking badges and past order receipts.
-  - Frictionless guest checkout remains 100% available without forcing login.
 
 ### 3.8. Storefront Experience & SaaS Landing Page
 - **Root Domain SaaS Landing Page (`amazingdeal.co.in`):**
@@ -322,6 +325,7 @@ The following log documents every major architecture, infrastructure, and featur
 | **2026-10-28 20:16:00 +0530** | *Workspace* | **Bugfix / Payments: Razorpay BYOK Engine & Diagnostics** | Refined Razorpay BYOK connection verification and order checkout flow. Identified & resolved: (1) Overbroad `contains("test")` bypass in `RazorpayService.testConnection` that falsely reported success on all `rzp_test_...` keys without contacting Razorpay; replaced with `testConnectionDetailed` performing live verification via `orders.fetchAll` and extracting exact Razorpay API errors; (2) Added fallback in `AdminSettingsController.testRazorpay` to resolve stored Key ID and decrypt masked Key Secret (`●●●●●●●●`); (3) Prevented dummy `order_byok_` IDs from reaching customer checkout and crashing the Razorpay JS SDK; (4) Enhanced `StoreSettings.tsx` with Razorpay API setup guidance callout pointing to Dashboard ➔ Settings ➔ API Keys. |
 | **2026-10-29 20:23:00 +0530** | *Workspace* | **Infrastructure: OCI Migration Stack & Automated SSL** | Created turnkey `docker-compose.oci.yml` (PostgreSQL 16 + Java 21 Spring Boot + Caddy) and production `Caddyfile` for migrating from Neon/Render to Oracle Cloud Infrastructure (OCI) Always Free ARM Ampere A1 VM (Mumbai/Hyderabad). Outlined database dump (`pg_dump`), restore, and automated Let's Encrypt SSL orchestration. |
 | **2026-10-29 21:35:00 +0530** | *Workspace* | **Bugfix / Persistence: BYOK & AI Keys Unified Database Storage** | Diagnosed and resolved why Payment BYOK, Shiprocket BYOK, Gemini, and OpenAI keys failed to save to database: (1) **Expired 24h JWT Token:** Server uptime exceeded 25h, causing requests to `/api/v1/admin/settings` and `/test-shiprocket` to be rejected with HTTP 403 Forbidden; (2) **Silent Frontend Failure:** `StoreSettings.handleSubmit` failed to `await onSave(payload)` and immediately flashed a false green success badge while `App.tsx` swallowed 403 errors with `console.warn`; (3) **AI Keys Disconnected:** `geminiKey` and `customKey` were completely omitted from `handleSubmit` payload and ignored by `AdminSettingsController.updateSettings`. Fixed by adding `geminiApiKey` and `openaiApiKey` to `AdminSettingsController.updateSettings`, returning `hasCustomGeminiKey`/`hasCustomOpenaiKey` in `getSettings`, making `StoreSettings.handleSubmit` asynchronous with full try/catch error banners, and rethrowing save failures in `App.tsx`. |
+| **2026-10-29 22:25:00 +0530** | *Workspace* | **Security / Storefront: Mandatory Customer Authentication on Orders** | Replaced guest checkout with mandatory customer authentication. (1) **Backend Hardening:** Updated `StorefrontController.placeOrder` and `OrderService` to strictly validate `customerId`, returning `HTTP 401 Unauthorized` (`"Customers must be logged in to place an order."`) if unauthenticated; (2) **Storefront UI Guard:** Updated `CartDrawer.tsx` to require login before checkout, prompting with `CustomerAuthModal` and auto-resuming to checkout upon successful sign-in; (3) **Checkout Protection:** In `CheckoutModal.tsx`, blocked direct order submission when unauthenticated and added fallback login screen; (4) **StoreApi Cleanup:** Removed fake order client-side fallback in `storeApi.ts` so genuine backend errors are surfaced; (5) **Testing:** Updated `PaymentAndShippingIntegrationTest` and `LiveNeonEndToEndTest` with authenticated customer sessions (100% passing). |
 
 ---
 

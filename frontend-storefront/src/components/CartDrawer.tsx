@@ -1,6 +1,6 @@
 import React from 'react';
 import { CartItem, StoreInfo, Product } from '../types';
-import { X, Plus, Minus, ShoppingBag, ArrowRight, Truck } from 'lucide-react';
+import { X, Plus, Minus, ShoppingBag, ArrowRight, Truck, Lock } from 'lucide-react';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -158,12 +158,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </div>
 
             {!customer && onOpenAuth && (
-              <div className="bg-emerald-50/80 p-2.5 rounded-xl border border-emerald-200/60 flex items-center justify-between text-xs">
-                <span className="text-emerald-900 font-semibold">Sign in for 1-click address checkout</span>
+              <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-1.5 text-amber-900 font-semibold">
+                  <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                  <span>Login required to place order</span>
+                </div>
                 <button
                   type="button"
                   onClick={onOpenAuth}
-                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-xs"
+                  className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shadow-xs"
                 >
                   Sign In
                 </button>
@@ -171,11 +174,26 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             )}
 
             <button
-              onClick={onCheckout}
+              onClick={() => {
+                if (!customer) {
+                  onOpenAuth?.();
+                } else {
+                  onCheckout();
+                }
+              }}
               className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center space-x-2"
             >
-              <span>Proceed to Checkout (₹{grandTotal.toFixed(2)})</span>
-              <ArrowRight className="w-4 h-4" />
+              {!customer ? (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>Sign In to Place Order (₹{grandTotal.toFixed(2)})</span>
+                </>
+              ) : (
+                <>
+                  <span>Proceed to Checkout (₹{grandTotal.toFixed(2)})</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </div>
         )}

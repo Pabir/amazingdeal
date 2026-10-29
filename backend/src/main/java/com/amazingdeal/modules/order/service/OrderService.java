@@ -159,6 +159,9 @@ public class OrderService {
         if (customerId == null) {
             customerId = com.amazingdeal.multitenancy.CustomerContext.getCustomerId();
         }
+        if (customerId == null) {
+            throw new IllegalArgumentException("Customers must be logged in to place an order.");
+        }
 
         Order order = Order.builder()
                 .customerId(customerId)

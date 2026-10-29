@@ -8,6 +8,7 @@ interface CustomerAuthModalProps {
   onEmailLogin: (email: string, pass: string, isSignUp: boolean, fullName?: string) => Promise<any>;
   loading: boolean;
   error: string | null;
+  message?: string | null;
 }
 
 export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
@@ -17,6 +18,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
   onEmailLogin,
   loading,
   error,
+  message,
 }) => {
   if (!isOpen) return null;
 
@@ -83,6 +85,13 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
             Save delivery addresses, track live orders, and checkout in 1-click.
           </p>
         </div>
+
+        {message && (
+          <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs rounded-2xl flex items-center space-x-2 font-medium">
+            <Lock className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{message}</span>
+          </div>
+        )}
 
         {/* Perks Box */}
         <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100 mb-5">

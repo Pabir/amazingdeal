@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StoreInfo, CartItem, CustomerProfile, CustomerAddress } from '../types';
 import {
   X, Truck, Store, QrCode, Banknote, ShieldCheck, Sparkles, MapPin,
-  Plus, Check, CreditCard, Clock, Calendar, Zap, AlertCircle
+  Plus, Check, CreditCard, Clock, Calendar, Zap, AlertCircle, Lock
 } from 'lucide-react';
 import { StoreApi } from '../services/storeApi';
 
@@ -177,6 +177,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!customer) {
+      alert('You must be logged in to place an order.');
+      onOpenAuth?.();
+      return;
+    }
     if (!customerName.trim() || !customerPhone.trim()) {
       alert('Please provide your name and 10-digit phone number');
       return;
@@ -332,24 +337,34 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           </button>
         </div>
 
-        {/* Guest prompt if not logged in */}
-        {!customer && onOpenAuth && (
-          <div className="mb-4 p-3 bg-emerald-50/70 border border-emerald-200/60 rounded-2xl flex items-center justify-between text-xs">
-            <div className="flex items-center space-x-2">
-              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span className="text-emerald-900 font-medium">Have an account? Sign in to use saved addresses</span>
+        {!customer ? (
+          <div className="py-8 px-2 text-center space-y-5">
+            <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-inner">
+              <Lock className="w-8 h-8" />
             </div>
-            <button
-              type="button"
-              onClick={onOpenAuth}
-              className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px]"
-            >
-              Sign In
-            </button>
-          </div>
-        )}
+            <div className="space-y-1.5 max-w-sm mx-auto">
+              <h4 className="text-lg font-black text-slate-900">Login Required to Place Order</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Customers must be logged in to place an order. Please sign in or create an account to track delivery in real time and enjoy secure checkout.
+              </p>
+            </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="pt-2 flex flex-col gap-2.5 justify-center max-w-xs mx-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenAuth?.();
+                }}
+                className="w-full py-3.5 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center space-x-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Sign In / Create Account</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
           
           {/* Customer Contacts */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -697,6 +712,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           </button>
 
         </form>
+        )}
       </div>
     </div>
   );

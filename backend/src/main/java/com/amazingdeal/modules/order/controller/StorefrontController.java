@@ -1,5 +1,6 @@
 package com.amazingdeal.modules.order.controller;
 
+import com.amazingdeal.modules.customer.repository.CustomerRepository;
 import com.amazingdeal.modules.order.dto.CreateOrderRequest;
 import com.amazingdeal.modules.order.dto.OrderResponseDto;
 import com.amazingdeal.modules.order.service.OrderService;
@@ -7,6 +8,7 @@ import com.amazingdeal.modules.product.model.Product;
 import com.amazingdeal.modules.product.service.ProductService;
 import com.amazingdeal.modules.tenant.model.Tenant;
 import com.amazingdeal.modules.tenant.service.TenantService;
+import com.amazingdeal.multitenancy.CustomerContext;
 import com.amazingdeal.multitenancy.TenantContext;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class StorefrontController {
     private final TenantService tenantService;
     private final ProductService productService;
     private final OrderService orderService;
+    private final CustomerRepository customerRepository;
     private final com.amazingdeal.modules.payment.razorpay.service.RazorpayService razorpayService;
     private final com.amazingdeal.modules.shipping.shiprocket.service.ShiprocketService shiprocketService;
 
@@ -100,6 +103,21 @@ public class StorefrontController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Storefront not found"));
         }
 
+        UUID customerId = CustomerContext.getCustomerId();
+        if (customerId == null && request.getCustomerId() != null) {
+            if (customerRepository.existsById(request.getCustomerId())) {
+                customerId = request.getCustomerId();
+            }
+        }
+
+        if (customerId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "error", "Customer login required",
+                    "message", "Customers must be logged in to place an order. Please sign in or register."
+            ));
+        }
+
+        request.setCustomerId(customerId);
         TenantContext.setTenantId(tenant.getId());
         OrderResponseDto order = orderService.createOrder(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(order);

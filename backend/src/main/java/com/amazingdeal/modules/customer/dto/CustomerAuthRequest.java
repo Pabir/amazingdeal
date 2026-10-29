@@ -1,9 +1,15 @@
 package com.amazingdeal.modules.customer.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class CustomerAuthRequest {
 
     @NotBlank(message = "Firebase UID is required")

@@ -1,6 +1,8 @@
 package com.amazingdeal;
 
 import com.amazingdeal.modules.ai.util.AesCryptoUtil;
+import com.amazingdeal.modules.customer.dto.CustomerAuthRequest;
+import com.amazingdeal.modules.customer.service.CustomerService;
 import com.amazingdeal.modules.order.dto.CreateOrderRequest;
 import com.amazingdeal.modules.order.dto.OrderItemDto;
 import com.amazingdeal.modules.order.dto.OrderResponseDto;
@@ -39,6 +41,9 @@ public class PaymentAndShippingIntegrationTest {
     private OrderService orderService;
 
     @Autowired
+    private CustomerService customerService;
+
+    @Autowired
     private OrderRepository orderRepository;
 
     @Autowired
@@ -52,6 +57,7 @@ public class PaymentAndShippingIntegrationTest {
 
     private static UUID testTenantId;
     private static UUID testOrderId;
+    private static UUID testCustomerId;
 
     @BeforeEach
     void setupTenantContext() {
@@ -164,8 +170,22 @@ public class PaymentAndShippingIntegrationTest {
     void testCodSurchargeAndOrderCreation() {
         TenantContext.setTenantId(testTenantId);
 
+        if (testCustomerId == null) {
+            var custAuth = customerService.verifyOrRegister(
+                    CustomerAuthRequest.builder()
+                            .firebaseUid("test_shopper_" + testTenantId.toString().substring(0, 8))
+                            .fullName("Sunita Rao")
+                            .phone("9822334455")
+                            .email("sunita@gmail.com")
+                            .authProvider("FIREBASE")
+                            .build()
+            );
+            testCustomerId = custAuth.getId();
+        }
+
         // 1. Order below min amount should fail COD
         CreateOrderRequest lowReq = new CreateOrderRequest();
+        lowReq.setCustomerId(testCustomerId);
         lowReq.setCustomerName("Low Amount Customer");
         lowReq.setCustomerPhone("9811223344");
         lowReq.setDeliveryAddress("100 Feet Rd, Indiranagar");
@@ -181,6 +201,7 @@ public class PaymentAndShippingIntegrationTest {
 
         // 2. Valid COD order should automatically apply ₹25 surcharge
         CreateOrderRequest validReq = new CreateOrderRequest();
+        validReq.setCustomerId(testCustomerId);
         validReq.setCustomerName("Sunita Rao");
         validReq.setCustomerPhone("9822334455");
         validReq.setDeliveryAddress("Flat 302, Palm Grove, Indiranagar");

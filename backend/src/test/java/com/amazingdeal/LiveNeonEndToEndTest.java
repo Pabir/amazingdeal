@@ -41,6 +41,9 @@ class LiveNeonEndToEndTest {
     @Autowired
     private OrderService orderService;
 
+    @Autowired
+    private com.amazingdeal.modules.customer.service.CustomerService customerService;
+
     @Test
     void testLiveStoreRegistrationAndOrderFlowInNeon() {
         String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
@@ -72,9 +75,20 @@ class LiveNeonEndToEndTest {
             assertFalse(products.isEmpty(), "Sample products should be auto-seeded for the store");
             System.out.println(">>> SEEDED " + products.size() + " PRODUCTS FOR STORE IN NEON POSTGRES! <<<");
 
-            // 3. Place a customer order with UPI payment
+            // 3. Place a customer order with UPI payment (authenticated customer)
+            var customerAuth = customerService.verifyOrRegister(
+                com.amazingdeal.modules.customer.dto.CustomerAuthRequest.builder()
+                    .firebaseUid("test_cust_" + uniqueSuffix)
+                    .fullName("Vikram Singh")
+                    .phone("9811223344")
+                    .email("vikram" + uniqueSuffix + "@gmail.com")
+                    .authProvider("FIREBASE")
+                    .build()
+            );
+
             Product firstProd = products.get(0);
             CreateOrderRequest orderReq = new CreateOrderRequest();
+            orderReq.setCustomerId(customerAuth.getId());
             orderReq.setCustomerName("Vikram Singh");
             orderReq.setCustomerPhone("9811223344");
             orderReq.setDeliveryAddress("Flat 102, Green Park Residency, New Delhi");

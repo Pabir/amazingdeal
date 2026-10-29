@@ -144,56 +144,30 @@ export class StoreApi {
     ];
   }
 
-  public static async placeOrder(subdomain: string, orderData: any): Promise<OrderResponse> {
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/store/orders?subdomain=${encodeURIComponent(subdomain)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
-      });
-      if (res.ok) {
-        return await res.json();
-      }
-    } catch (e) {
-      console.warn('Backend order placement offline fallback:', e);
+  public static async placeOrder(subdomain: string, orderData: any, token?: string | null): Promise<OrderResponse> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // Client-side fallback order generation with live UPI QR payload
-    const total = orderData.items.reduce(
-      (acc: number, item: any) => acc + item.price * item.quantity,
-      0
-    );
-    const deliveryFee = orderData.deliveryType === 'PICKUP' || total >= 499 ? 0 : 30;
-    const grandTotal = total + deliveryFee;
-    const orderNumber = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+    const res = await fetch(`${API_BASE}/api/v1/store/orders?subdomain=${encodeURIComponent(subdomain)}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(orderData),
+    });
 
-    const upiUri = `upi://pay?pa=${encodeURIComponent(subdomain + '@okaxis')}&pn=${encodeURIComponent(
-      subdomain.toUpperCase() + ' STORE'
-    )}&am=${grandTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent('Order ' + orderNumber)}`;
+    if (res.ok) {
+      return await res.json();
+    }
 
-    return {
-      id: 'ord-' + Date.now(),
-      orderNumber,
-      storeName: subdomain.toUpperCase() + ' Store',
-      customerName: orderData.customerName,
-      customerPhone: orderData.customerPhone,
-      deliveryAddress: orderData.deliveryAddress,
-      deliveryType: orderData.deliveryType,
-      paymentMethod: orderData.paymentMethod,
-      paymentStatus: 'PENDING',
-      orderStatus: 'PLACED',
-      totalAmount: grandTotal,
-      deliveryCharge: deliveryFee,
-      items: orderData.items.map((i: any) => ({
-        title: i.title,
-        price: i.price,
-        quantity: i.quantity,
-        itemTotal: i.price * i.quantity,
-      })),
-      createdAt: new Date().toISOString(),
-      upiUri,
-      upiVpa: `${subdomain}@okaxis`,
-    };
+    let errMsg = `Failed to place order (HTTP ${res.status})`;
+    try {
+      const errJson = await res.json();
+      errMsg = errJson.message || errJson.error || errMsg;
+    } catch {
+      // ignore
+    }
+    throw new Error(errMsg);
   }
 
   public static async checkSubdomain(subdomain: string): Promise<{ available: boolean; subdomain: string; message: string }> {

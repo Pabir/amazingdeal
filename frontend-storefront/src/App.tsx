@@ -59,8 +59,17 @@ export function App() {
 
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(false);
+  const [pendingCheckoutAfterAuth, setPendingCheckoutAfterAuth] = useState<boolean>(false);
   const [placingOrder, setPlacingOrder] = useState<boolean>(false);
   const [confirmedOrder, setConfirmedOrder] = useState<OrderResponse | null>(null);
+
+  // Automatically transition to checkout once the customer completes login
+  useEffect(() => {
+    if (customer && pendingCheckoutAfterAuth) {
+      setPendingCheckoutAfterAuth(false);
+      setIsCheckoutOpen(true);
+    }
+  }, [customer, pendingCheckoutAfterAuth]);
 
   useEffect(() => {
     async function loadStoreData() {
@@ -169,9 +178,15 @@ export function App() {
 
   const handlePlaceOrder = async (orderPayload: any) => {
     if (!subdomain) return;
+    if (!customer) {
+      alert('You must be logged in to place an order.');
+      setPendingCheckoutAfterAuth(true);
+      setIsAuthOpen(true);
+      return;
+    }
     try {
       setPlacingOrder(true);
-      const createdOrder = await StoreApi.placeOrder(subdomain, orderPayload);
+      const createdOrder = await StoreApi.placeOrder(subdomain, orderPayload, token);
       setConfirmedOrder(createdOrder);
       setIsCheckoutOpen(false);
       setIsCartOpen(false);
@@ -342,11 +357,17 @@ export function App() {
         onUpdateQuantity={updateQuantity}
         onCheckout={() => {
           setIsCartOpen(false);
+          if (!customer) {
+            setPendingCheckoutAfterAuth(true);
+            setIsAuthOpen(true);
+            return;
+          }
           setIsCheckoutOpen(true);
         }}
         customer={customer}
         onOpenAuth={() => {
           setIsCartOpen(false);
+          setPendingCheckoutAfterAuth(true);
           setIsAuthOpen(true);
         }}
         onProductClick={handleOpenProductDetails}
@@ -364,17 +385,24 @@ export function App() {
         customer={customer}
         addresses={addresses}
         onSaveAddress={saveAddress}
-        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenAuth={() => {
+          setPendingCheckoutAfterAuth(true);
+          setIsAuthOpen(true);
+        }}
       />
 
       {/* Customer Login / Signup Modal */}
       <CustomerAuthModal
         isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
+        onClose={() => {
+          setIsAuthOpen(false);
+          setPendingCheckoutAfterAuth(false);
+        }}
         onGoogleLogin={loginWithGoogle}
         onEmailLogin={loginWithEmail}
         loading={authLoading}
         error={authError}
+        message={pendingCheckoutAfterAuth ? "Please sign in or create an account to place your order." : null}
       />
 
       {/* Customer Order History & Tracking Modal */}
