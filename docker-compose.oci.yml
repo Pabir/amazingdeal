@@ -1,0 +1,87 @@
+# ========================================================
+# AmazingDeal Production Stack for Oracle Cloud (OCI Always Free ARM VM)
+# Includes: PostgreSQL 16 + Spring Boot 3.3 Backend + Caddy Automated SSL Reverse Proxy
+# ========================================================
+
+version: '3.8'
+
+services:
+  # ----------------------------------------------------
+  # 1. Native PostgreSQL 16 Database
+  # ----------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: amazingdeal-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: amazingdeal
+      POSTGRES_USER: amazingdeal_owner
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-StrongOciDbPass2026!}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - oci_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U amazingdeal_owner -d amazingdeal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - amazingdeal-net
+
+  # ----------------------------------------------------
+  # 2. Spring Boot 3.3 Multi-Tenant Backend (Java 21)
+  # ----------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: amazingdeal-backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 8080
+      SPRING_PROFILES_ACTIVE: cloud
+      DATABASE_URL: jdbc:postgresql://postgres:5432/amazingdeal
+      DB_USER: amazingdeal_owner
+      DB_PASSWORD: ${DB_PASSWORD:-StrongOciDbPass2026!}
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      JWT_EXPIRATION_MS: 2592000000
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-rzp_test_TM5arepb23gG9I}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-2fbcu6X8Xkf26eKrPR8RkIGL}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME:-amazingdeal-media}
+    networks:
+      - amazingdeal-net
+
+  # ----------------------------------------------------
+  # 3. Caddy Automated HTTPS / Reverse Proxy
+  # ----------------------------------------------------
+  caddy:
+    image: caddy:alpine
+    container_name: amazingdeal-caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - oci_caddy_data:/data
+      - oci_caddy_config:/config
+    depends_on:
+      - backend
+    networks:
+      - amazingdeal-net
+
+networks:
+  amazingdeal-net:
+    driver: bridge
+
+volumes:
+  oci_postgres_data:
+  oci_caddy_data:
+  oci_caddy_config:
+

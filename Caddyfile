@@ -1,0 +1,25 @@
+# ========================================================
+# Caddyfile: Automated HTTPS & Reverse Proxy for AmazingDeal
+# ========================================================
+
+# Replace with your production API domain
+api.amazingdeal.co.in {
+    # Reverse proxy all API traffic directly to Spring Boot
+    reverse_proxy backend:8080 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Enable modern Gzip and Zstandard compression
+    encode gzip zstd
+
+    # Optional security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+    }
+}
+

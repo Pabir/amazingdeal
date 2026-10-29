@@ -99,6 +99,11 @@ public class AdminSettingsController {
         res.put("shiprocketFlatFee", t.getShiprocketFlatFee() != null ? t.getShiprocketFlatFee() : BigDecimal.valueOf(60.0));
         res.put("shiprocketFreeAbove", t.getShiprocketFreeAbove() != null ? t.getShiprocketFreeAbove() : BigDecimal.valueOf(999.0));
 
+        // AI Vision & Catalog BYOK
+        res.put("aiProviderPreference", t.getAiProviderPreference() != null ? t.getAiProviderPreference() : "AUTO");
+        res.put("hasCustomGeminiKey", t.getCustomGeminiApiKey() != null && !t.getCustomGeminiApiKey().isBlank());
+        res.put("hasCustomOpenaiKey", t.getCustomOpenaiApiKey() != null && !t.getCustomOpenaiApiKey().isBlank());
+
         return ResponseEntity.ok(res);
     }
 
@@ -219,6 +224,23 @@ public class AdminSettingsController {
         }
         if (req.containsKey("shiprocketFreeAbove") && req.get("shiprocketFreeAbove") != null) {
             t.setShiprocketFreeAbove(new BigDecimal(req.get("shiprocketFreeAbove").toString()));
+        }
+
+        // AI Vision & Catalog BYOK
+        if (req.containsKey("aiProviderPreference") && req.get("aiProviderPreference") != null) {
+            t.setAiProviderPreference(req.get("aiProviderPreference").toString().trim().toUpperCase());
+        }
+        if (req.containsKey("geminiApiKey")) {
+            String gKey = req.get("geminiApiKey") != null ? req.get("geminiApiKey").toString().trim() : "";
+            if (!gKey.isBlank() && !MASKED.equals(gKey)) {
+                t.setCustomGeminiApiKey(aesCryptoUtil.encrypt(gKey));
+            }
+        }
+        if (req.containsKey("openaiApiKey")) {
+            String oKey = req.get("openaiApiKey") != null ? req.get("openaiApiKey").toString().trim() : "";
+            if (!oKey.isBlank() && !MASKED.equals(oKey)) {
+                t.setCustomOpenaiApiKey(aesCryptoUtil.encrypt(oKey));
+            }
         }
 
         Tenant saved = tenantRepository.save(t);

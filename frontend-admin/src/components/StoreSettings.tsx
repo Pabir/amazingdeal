@@ -10,7 +10,7 @@ import { MASTER_STORE_CATEGORIES } from '../data/categoriesData';
 
 interface StoreSettingsProps {
   tenant: Tenant | null;
-  onSave: (updated: Partial<Tenant>) => void;
+  onSave: (updated: Partial<Tenant>) => Promise<void> | void;
 }
 
 type TabType = 'PROFILE' | 'PAYMENT' | 'DELIVERY' | 'GST_BANK' | 'AI_STUDIO';
@@ -18,6 +18,8 @@ type TabType = 'PROFILE' | 'PAYMENT' | 'DELIVERY' | 'GST_BANK' | 'AI_STUDIO';
 export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) => {
   const [activeTab, setActiveTab] = useState<TabType>('PROFILE');
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [loadingSettings, setLoadingSettings] = useState(false);
 
   // Store Profile State
@@ -91,6 +93,8 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
   const [aiLoading, setAiLoading] = useState(false);
   const [customKey, setCustomKey] = useState<string>(() => localStorage.getItem('ad_custom_openai_key') || '');
   const [geminiKey, setGeminiKey] = useState<string>(() => localStorage.getItem('ad_custom_gemini_key') || '');
+  const [hasGeminiKey, setHasGeminiKey] = useState(false);
+  const [hasOpenAiKey, setHasOpenAiKey] = useState(false);
   const [savingKey, setSavingKey] = useState(false);
   const [savingGeminiKey, setSavingGeminiKey] = useState(false);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
@@ -153,6 +157,10 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
         if (data.shiprocketPricingRule) setShiprocketPricingRule(data.shiprocketPricingRule);
         if (data.shiprocketFlatFee !== undefined) setShiprocketFlatFee(data.shiprocketFlatFee.toString());
         if (data.shiprocketFreeAbove !== undefined) setShiprocketFreeAbove(data.shiprocketFreeAbove.toString());
+
+        // AI Vision & Catalog BYOK
+        if (data.hasCustomGeminiKey !== undefined) setHasGeminiKey(data.hasCustomGeminiKey);
+        if (data.hasCustomOpenaiKey !== undefined) setHasOpenAiKey(data.hasCustomOpenaiKey);
       }
     } catch (e: any) {
       console.warn('Could not fetch server settings:', e);
@@ -166,6 +174,8 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
       setAiLoading(true);
       const res = await ApiService.getChatGptStatus();
       setAiStatus(res);
+      if (res?.hasCustomGeminiKey) setHasGeminiKey(true);
+      if (res?.hasCustomApiKey) setHasOpenAiKey(true);
     } catch (e: any) {
       console.warn('Could not fetch AI status:', e);
     } finally {
@@ -243,9 +253,13 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload: Partial<Tenant> = {
+    setSavingSettings(true);
+    setSaveError(null);
+    setSavedSuccess(false);
+
+    const payload: any = {
       storeName,
       storeAddress,
       ownerPhone,
@@ -292,11 +306,30 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
       bankAccountNumber,
       bankIfsc,
       bankBranch,
+      // AI Vision & Catalog BYOK
+      geminiApiKey: geminiKey && geminiKey !== '●●●●●●●●' ? geminiKey.trim() : undefined,
+      openaiApiKey: customKey && customKey !== '●●●●●●●●' ? customKey.trim() : undefined,
     };
 
-    onSave(payload);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+    try {
+      await onSave(payload);
+      if (geminiKey) localStorage.setItem('ad_custom_gemini_key', geminiKey.trim());
+      if (customKey) localStorage.setItem('ad_custom_openai_key', customKey.trim());
+      if (geminiKey) setHasGeminiKey(true);
+      if (customKey) setHasOpenAiKey(true);
+      if (razorpayKeySecret && razorpayKeySecret !== '●●●●●●●●') setHasRazorpaySecret(true);
+      if (shiprocketPassword && shiprocketPassword !== '●●●●●●●●') setHasShiprocketPassword(true);
+
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3500);
+    } catch (err: any) {
+      console.error('Save settings failed:', err);
+      const msg = err.message || 'Failed to save settings. Please sign in again or check connection.';
+      setSaveError(msg);
+      alert(`Save Failed: ${msg}`);
+    } finally {
+      setSavingSettings(false);
+    }
   };
 
   return (
@@ -320,6 +353,12 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
             <span className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 animate-bounce">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span>Settings Saved & Synced!</span>
+            </span>
+          )}
+          {saveError && (
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
+              <AlertCircle className="w-4 h-4 text-rose-600" />
+              <span>{saveError}</span>
             </span>
           )}
         </div>
@@ -1190,8 +1229,9 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                 <div className="flex items-center justify-between">
                   <span className="font-extrabold text-sm text-blue-300 flex items-center gap-2">
                     <span>Google Gemini Vision (Free Tier Available)</span>
+                    {hasGeminiKey && <span className="text-emerald-400 text-xs font-normal">(Stored Securely)</span>}
                   </span>
-                  {aiStatus?.hasCustomGeminiKey && (
+                  {(hasGeminiKey || aiStatus?.hasCustomGeminiKey) && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">
                       Active
                     </span>
@@ -1200,7 +1240,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                 <div className="flex items-center gap-2">
                   <input
                     type="password"
-                    placeholder="Paste Gemini API Key (AIzaSy...)"
+                    placeholder={hasGeminiKey ? '●●●●●●●● (Enter to update)' : 'Paste Gemini API Key (AIzaSy...)'}
                     value={geminiKey}
                     onChange={(e) => setGeminiKey(e.target.value)}
                     className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-blue-400"
@@ -1230,8 +1270,9 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                 <div className="flex items-center justify-between">
                   <span className="font-extrabold text-sm text-emerald-300 flex items-center gap-2">
                     <span>OpenAI Vision (GPT-4o mini)</span>
+                    {hasOpenAiKey && <span className="text-emerald-400 text-xs font-normal">(Stored Securely)</span>}
                   </span>
-                  {aiStatus?.hasCustomApiKey && (
+                  {(hasOpenAiKey || aiStatus?.hasCustomApiKey) && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                       Active
                     </span>
@@ -1240,7 +1281,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                 <div className="flex items-center gap-2">
                   <input
                     type="password"
-                    placeholder="Paste OpenAI Key (sk-...)"
+                    placeholder={hasOpenAiKey ? '●●●●●●●● (Enter to update)' : 'Paste OpenAI Key (sk-...)'}
                     value={customKey}
                     onChange={(e) => setCustomKey(e.target.value)}
                     className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-emerald-400"
@@ -1268,6 +1309,19 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
           </div>
         )}
 
+        {/* Global Save Error Banner */}
+        {saveError && (
+          <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center space-x-3 text-rose-800 text-xs">
+            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            <div className="flex-1">
+              <span className="font-bold">Error saving settings:</span> {saveError}
+              <p className="text-[11px] text-rose-600 mt-0.5">
+                If your login session has expired, please log out (top right icon) and sign in again to re-authenticate.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Global Save Button */}
         <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
           <p className="text-xs text-slate-500">
@@ -1275,10 +1329,20 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
           </p>
           <button
             type="submit"
-            className="inline-flex items-center space-x-2 px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-sm font-black shadow-lg shadow-slate-900/25 transition-all transform hover:-translate-y-0.5"
+            disabled={savingSettings}
+            className="inline-flex items-center space-x-2 px-8 py-3 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white rounded-2xl text-sm font-black shadow-lg shadow-slate-900/25 transition-all transform hover:-translate-y-0.5"
           >
-            <Save className="w-4 h-4 text-emerald-400" />
-            <span>Save All Settings</span>
+            {savingSettings ? (
+              <>
+                <RefreshCw className="w-4 h-4 text-emerald-400 animate-spin" />
+                <span>Saving All Settings...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 text-emerald-400" />
+                <span>Save All Settings</span>
+              </>
+            )}
           </button>
         </div>
 

@@ -466,6 +466,7 @@ ${invoice.balanceDue > 0 ? `Balance Due:         ₹${invoice.balanceDue.toFixed
       if (persisted) setTenant(persisted);
     } catch (err: any) {
       console.warn('Could not persist settings to server:', err.message);
+      throw err;
     }
   };
 
