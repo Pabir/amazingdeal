@@ -92,7 +92,7 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
   }, [displayInvoices, selectedIds]);
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === displayInvoices.length) {
+    if (selectedIds.size === displayInvoices.length && displayInvoices.length > 0) {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(displayInvoices.map((i) => i.id)));
@@ -270,14 +270,14 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
           <div className="flex items-center space-x-3">
             <button
               onClick={toggleSelectAll}
-              className="flex items-center space-x-1.5 hover:text-indigo-700"
+              className="flex items-center space-x-1.5 hover:text-indigo-700 transition-colors"
             >
-              {selectedIds.size === displayInvoices.length ? (
+              {selectedIds.size === displayInvoices.length && displayInvoices.length > 0 ? (
                 <CheckSquare className="w-4 h-4 text-indigo-600" />
               ) : (
                 <Square className="w-4 h-4 text-slate-400" />
               )}
-              <span>{selectedIds.size === displayInvoices.length ? 'Deselect All' : 'Select All'}</span>
+              <span>{selectedIds.size === displayInvoices.length && displayInvoices.length > 0 ? 'Deselect All' : 'Select All'}</span>
             </button>
             <span className="text-indigo-300">|</span>
             <span>Total Value: ₹{totalSelectedValue.toFixed(2)}</span>
@@ -290,7 +290,7 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
 
         {/* Scrollable Document Area (On Screen Preview) */}
         <div className="overflow-y-auto p-4 sm:p-6 space-y-8 print:space-y-0 print:p-0 print:overflow-visible">
-          {selectedInvoicesToPrint.length === 0 ? (
+          {displayInvoices.length === 0 ? (
             <div className="p-12 text-center text-slate-400">
               <FileText className="w-12 h-12 stroke-[1.2] mx-auto mb-2 text-slate-300" />
               <p className="text-sm font-semibold text-slate-700">No invoices match selected period</p>
@@ -299,7 +299,8 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
               </p>
             </div>
           ) : (
-            selectedInvoicesToPrint.map((invoice, invIndex) => {
+            displayInvoices.map((invoice, invIndex) => {
+              const isSelected = selectedIds.has(invoice.id);
               const isIntrastate = (invoice.cgstAmount || 0) > 0 || (invoice.sgstAmount || 0) > 0;
               const merchantState = tenant?.stateCode ? getGstStateByCode(tenant.stateCode)?.label || tenant.stateCode : '07-Delhi';
               const placeOfSupply = getGstStateByCode(invoice.placeOfSupply)?.label || invoice.placeOfSupply || merchantState;
@@ -307,18 +308,37 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
               return (
                 <div
                   key={invoice.id}
-                  className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 shadow-sm"
+                  className={`bg-white border rounded-xl p-6 sm:p-8 shadow-sm transition-all ${
+                    isSelected
+                      ? 'border-indigo-200 ring-1 ring-indigo-100'
+                      : 'border-slate-200 opacity-60 hover:opacity-100 bg-slate-50/40'
+                  }`}
                 >
-                  {/* Screen checkbox to deselect this invoice */}
+                  {/* Screen checkbox to toggle this invoice */}
                   <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 text-xs">
                     <button
                       onClick={() => toggleSelect(invoice.id)}
-                      className="flex items-center space-x-2 text-slate-700 font-semibold hover:text-indigo-600"
+                      className={`flex items-center space-x-2 font-semibold transition-colors ${
+                        isSelected ? 'text-indigo-700' : 'text-slate-500 hover:text-slate-800'
+                      }`}
                     >
-                      <CheckSquare className="w-4 h-4 text-indigo-600" />
-                      <span>Invoice #{invoice.invoiceNumber} (Include in Batch Print)</span>
+                      {isSelected ? (
+                        <CheckSquare className="w-4 h-4 text-indigo-600" />
+                      ) : (
+                        <Square className="w-4 h-4 text-slate-400" />
+                      )}
+                      <span>
+                        Invoice #{invoice.invoiceNumber} {isSelected ? '(Included in Batch Print)' : '(Excluded - Click to Include)'}
+                      </span>
                     </button>
-                    <span className="text-slate-400 font-mono">Invoice {invIndex + 1} of {selectedInvoicesToPrint.length}</span>
+                    <div className="flex items-center space-x-2">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        isSelected ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {isSelected ? 'Ready to Print' : 'Skipped'}
+                      </span>
+                      <span className="text-slate-400 font-mono">Invoice {invIndex + 1} of {displayInvoices.length}</span>
+                    </div>
                   </div>
 
                   {/* 1. Invoice Header */}
