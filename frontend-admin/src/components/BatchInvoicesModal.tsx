@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Printer, CheckSquare, Square, Download, FileText, Building2, Phone, Mail, MapPin, Calendar } from 'lucide-react';
+import { X, Printer, CheckSquare, Square, Download, FileText, Building2, Phone, Mail, MapPin, Calendar, Search } from 'lucide-react';
 import { Invoice, Tenant } from '../types';
 import { getGstStateByCode } from '../data/gstStatesData';
 import { printInvoices, numberToIndianWords, formatDate } from '../utils/printInvoices';
@@ -29,6 +29,7 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
   const [selectedPreset, setSelectedPreset] = useState<string>(initialPreset);
 
   const [filterMode, setFilterMode] = useState<'ALL' | 'B2B' | 'B2C'>('ALL');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   
   // Initialize selection once on mount with matching invoices; user actions alone dictate selection changes
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
@@ -118,15 +119,55 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
     });
   }, [invoices, startDate, endDate]);
 
-  // 2. Filter by document classification (ALL, B2B, B2C)
+  // 2. Filter by document classification (ALL, B2B, B2C) AND search query (Customer, Invoice #, Amount)
   const displayInvoices = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+
     return dateFilteredInvoices.filter((inv) => {
+      // 1. Doc classification filter
       const isB2B = Boolean(inv.partyGstin && inv.partyGstin.trim().length >= 15);
-      if (filterMode === 'B2B') return isB2B;
-      if (filterMode === 'B2C') return !isB2B;
-      return true;
+      if (filterMode === 'B2B' && !isB2B) return false;
+      if (filterMode === 'B2C' && isB2B) return false;
+
+      // 2. Search query filter
+      if (!q) return true;
+
+      // Match Customer Name
+      if (inv.partyName && inv.partyName.toLowerCase().includes(q)) return true;
+
+      // Match Invoice Number (e.g. "INV-0056", "0056")
+      if (inv.invoiceNumber && inv.invoiceNumber.toLowerCase().includes(q)) return true;
+
+      // Match Amount (Total Amount, Subtotal, Paid Amount, Balance Due)
+      const cleanQ = q.replace(/[₹,\s]/g, '');
+      if (cleanQ) {
+        const total = Number(inv.totalAmount || 0);
+        const subtotal = Number(inv.subtotal || 0);
+        const paid = Number(inv.paidAmount || 0);
+        const balance = Number(inv.balanceDue || 0);
+
+        if (
+          total.toFixed(2).includes(cleanQ) ||
+          String(Math.round(total)).includes(cleanQ) ||
+          subtotal.toFixed(2).includes(cleanQ) ||
+          String(Math.round(subtotal)).includes(cleanQ) ||
+          paid.toFixed(2).includes(cleanQ) ||
+          balance.toFixed(2).includes(cleanQ)
+        ) {
+          return true;
+        }
+      }
+
+      // Also match Phone, GSTIN, or Item Name
+      if (inv.partyPhone && inv.partyPhone.includes(q)) return true;
+      if (inv.partyGstin && inv.partyGstin.toLowerCase().includes(q)) return true;
+      if (inv.items && Array.isArray(inv.items)) {
+        if (inv.items.some((item) => item.itemName && item.itemName.toLowerCase().includes(q))) return true;
+      }
+
+      return false;
     });
-  }, [dateFilteredInvoices, filterMode]);
+  }, [dateFilteredInvoices, filterMode, searchQuery]);
 
   const selectedInvoicesToPrint = useMemo(() => {
     return displayInvoices.filter((inv) => selectedIds.has(inv.id));
@@ -233,7 +274,7 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
             </div>
           </div>
 
-          {/* Interactive Manual Period Selector Bar */}
+          {/* Row 2: Manual Period Selector & Quick Presets Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-slate-200">
             <div className="flex flex-wrap items-center gap-2">
               
@@ -284,14 +325,42 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
               </div>
 
             </div>
+          </div>
 
-            {/* Live Period Summary Badge */}
+          {/* Row 3: Live Period Badge & Quick Search Bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-t border-slate-200/70">
+            {/* Left: Period Badge & Found Count */}
             <div className="flex items-center space-x-2">
               <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-mono font-bold text-xs border border-indigo-200 shadow-2xs">
                 Period: {periodLabel}
               </span>
+              {searchQuery && (
+                <span className="text-[11px] text-slate-500 font-semibold">
+                  Found <strong className="text-slate-800">{displayInvoices.length}</strong> matching bill{displayInvoices.length === 1 ? '' : 's'}
+                </span>
+              )}
             </div>
 
+            {/* Right: Search Input */}
+            <div className="relative w-full sm:w-80 md:w-96">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by customer name, bill #, or amount (₹)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-8 py-1.5 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs text-slate-800 placeholder:text-slate-400 font-medium"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  title="Clear search"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-100"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
         </div>
@@ -324,9 +393,20 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
           {displayInvoices.length === 0 ? (
             <div className="p-12 text-center text-slate-400">
               <FileText className="w-12 h-12 stroke-[1.2] mx-auto mb-2 text-slate-300" />
-              <p className="text-sm font-semibold text-slate-700">No invoices match selected period</p>
+              <p className="text-sm font-semibold text-slate-700">
+                {searchQuery ? `No invoices found matching "${searchQuery}"` : 'No invoices match selected period'}
+              </p>
               <p className="text-xs text-slate-400 mt-1">
-                Try selecting &quot;All Time&quot; or expanding the From and To date pickers above.
+                {searchQuery ? (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="text-indigo-600 font-semibold hover:underline"
+                  >
+                    Clear search query
+                  </button>
+                ) : (
+                  'Try selecting "All Time" or expanding the From and To date pickers above.'
+                )}
               </p>
             </div>
           ) : (
