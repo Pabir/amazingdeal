@@ -480,10 +480,16 @@ ${tenant?.upiVpa ? `\nPay via UPI: upi://pay?pa=${tenant.upiVpa}&pn=${encodeURIC
       {/* 5. Batch Invoices Modal (Print / Save All Invoices as PDF) */}
       {isBatchModalOpen && (
         <BatchInvoicesModal
-          invoices={filteredInvoices}
+          invoices={invoices}
           tenant={tenant}
-          startDate={startDate}
-          endDate={endDate}
+          initialStartDate={startDate}
+          initialEndDate={endDate}
+          initialPreset={selectedPreset}
+          onDateRangeChange={(newStart, newEnd, newPreset) => {
+            setStartDate(newStart);
+            setEndDate(newEnd);
+            if (newPreset) setSelectedPreset(newPreset);
+          }}
           onClose={() => setIsBatchModalOpen(false)}
         />
       )}
