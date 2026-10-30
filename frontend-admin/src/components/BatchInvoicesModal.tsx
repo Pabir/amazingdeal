@@ -29,7 +29,17 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
   const [selectedPreset, setSelectedPreset] = useState<string>(initialPreset);
 
   const [filterMode, setFilterMode] = useState<'ALL' | 'B2B' | 'B2C'>('ALL');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  
+  // Initialize selection once on mount with matching invoices; user actions alone dictate selection changes
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
+    const initFiltered = invoices.filter((inv) => {
+      const invDate = inv.invoiceDate ? inv.invoiceDate.split('T')[0] : '';
+      const matchesStart = !initialStartDate || invDate >= initialStartDate;
+      const matchesEnd = !initialEndDate || invDate <= initialEndDate;
+      return matchesStart && matchesEnd;
+    });
+    return new Set(initFiltered.map((i) => i.id));
+  });
 
   // Apply Quick Date Range Preset
   const applyPreset = (preset: 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_QUARTER' | 'ALL' | 'TODAY') => {
@@ -59,7 +69,43 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
 
     setStartDate(newStart);
     setEndDate(newEnd);
+
+    // When the merchant explicitly changes the period, select the newly matching bills
+    const matching = invoices.filter((inv) => {
+      const invDate = inv.invoiceDate ? inv.invoiceDate.split('T')[0] : '';
+      const matchesStart = !newStart || invDate >= newStart;
+      const matchesEnd = !newEnd || invDate <= newEnd;
+      return matchesStart && matchesEnd;
+    });
+    setSelectedIds(new Set(matching.map((i) => i.id)));
+
     onDateRangeChange?.(newStart, newEnd, preset);
+  };
+
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val);
+    setSelectedPreset('CUSTOM');
+    const matching = invoices.filter((inv) => {
+      const invDate = inv.invoiceDate ? inv.invoiceDate.split('T')[0] : '';
+      const matchesStart = !val || invDate >= val;
+      const matchesEnd = !endDate || invDate <= endDate;
+      return matchesStart && matchesEnd;
+    });
+    setSelectedIds(new Set(matching.map((i) => i.id)));
+    onDateRangeChange?.(val, endDate, 'CUSTOM');
+  };
+
+  const handleEndDateChange = (val: string) => {
+    setEndDate(val);
+    setSelectedPreset('CUSTOM');
+    const matching = invoices.filter((inv) => {
+      const invDate = inv.invoiceDate ? inv.invoiceDate.split('T')[0] : '';
+      const matchesStart = !startDate || invDate >= startDate;
+      const matchesEnd = !val || invDate <= val;
+      return matchesStart && matchesEnd;
+    });
+    setSelectedIds(new Set(matching.map((i) => i.id)));
+    onDateRangeChange?.(startDate, val, 'CUSTOM');
   };
 
   // 1. Filter invoices by selected date range
@@ -81,11 +127,6 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
       return true;
     });
   }, [dateFilteredInvoices, filterMode]);
-
-  // Default: Select all invoices when filtered list updates
-  useEffect(() => {
-    setSelectedIds(new Set(displayInvoices.map((i) => i.id)));
-  }, [displayInvoices]);
 
   const selectedInvoicesToPrint = useMemo(() => {
     return displayInvoices.filter((inv) => selectedIds.has(inv.id));
@@ -229,12 +270,7 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setStartDate(val);
-                    setSelectedPreset('CUSTOM');
-                    onDateRangeChange?.(val, endDate, 'CUSTOM');
-                  }}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
                   className="bg-transparent text-slate-800 font-semibold text-xs focus:outline-none cursor-pointer"
                 />
                 <span className="text-slate-300 font-bold">→</span>
@@ -242,12 +278,7 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setEndDate(val);
-                    setSelectedPreset('CUSTOM');
-                    onDateRangeChange?.(startDate, val, 'CUSTOM');
-                  }}
+                  onChange={(e) => handleEndDateChange(e.target.value)}
                   className="bg-transparent text-slate-800 font-semibold text-xs focus:outline-none cursor-pointer"
                 />
               </div>
