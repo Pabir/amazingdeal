@@ -6,6 +6,7 @@ import com.amazingdeal.modules.billing.service.BillingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -56,5 +57,15 @@ public class BillingController {
             @PathVariable UUID id,
             @RequestParam(defaultValue = "80") int width) {
         return ResponseEntity.ok(billingService.generateThermalReceipt(id, width));
+    }
+
+    @GetMapping(value = "/export-gst-csv", produces = "text/csv; charset=UTF-8")
+    public ResponseEntity<String> exportGstCsv(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        String csv = billingService.generateGstSalesRegisterCsv(startDate, endDate);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"gst_sales_register.csv\"")
+                .body(csv);
     }
 }

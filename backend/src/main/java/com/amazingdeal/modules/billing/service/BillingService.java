@@ -358,6 +358,82 @@ public class BillingService {
         return sb.toString();
     }
 
+    @Transactional(readOnly = true)
+    public String generateGstSalesRegisterCsv(LocalDate startDate, LocalDate endDate) {
+        UUID tenantId = TenantContext.getTenantId();
+        Tenant tenant = tenantId != null ? tenantRepository.findById(tenantId).orElse(null) : null;
+        String storeName = tenant != null && tenant.getStoreName() != null ? tenant.getStoreName() : "Store";
+        String merchantGstin = tenant != null && tenant.getGstin() != null ? tenant.getGstin() : "Unregistered";
+
+        List<Invoice> invoices = invoiceRepository.searchInvoices(null, null, startDate, endDate, null);
+
+        StringBuilder sb = new StringBuilder();
+        // UTF-8 BOM
+        sb.append("\uFEFF");
+        sb.append("\"GST Sales Register - ").append(escapeCsv(storeName)).append("\"\n");
+        sb.append("\"Merchant GSTIN: ").append(escapeCsv(merchantGstin))
+          .append("\",\"Period: ").append(startDate != null ? startDate.toString() : "All")
+          .append(" to ").append(endDate != null ? endDate.toString() : "Current")
+          .append("\"\n\n");
+
+        sb.append("Sl No,Invoice Number,Invoice Date,Document Type,Customer Name,Customer GSTIN,Customer Phone,Place of Supply,Taxable Value (INR),CGST (INR),SGST (INR),IGST (INR),Total Tax (INR),Round Off,Total Amount (INR),Payment Mode,Payment Status\n");
+
+        int sl = 1;
+        BigDecimal sumTaxable = BigDecimal.ZERO;
+        BigDecimal sumCgst = BigDecimal.ZERO;
+        BigDecimal sumSgst = BigDecimal.ZERO;
+        BigDecimal sumIgst = BigDecimal.ZERO;
+        BigDecimal sumTotal = BigDecimal.ZERO;
+
+        for (Invoice inv : invoices) {
+            BigDecimal taxable = inv.getSubtotal() != null ? inv.getSubtotal() : BigDecimal.ZERO;
+            BigDecimal cgst = inv.getCgstAmount() != null ? inv.getCgstAmount() : BigDecimal.ZERO;
+            BigDecimal sgst = inv.getSgstAmount() != null ? inv.getSgstAmount() : BigDecimal.ZERO;
+            BigDecimal igst = inv.getIgstAmount() != null ? inv.getIgstAmount() : BigDecimal.ZERO;
+            BigDecimal totalTax = cgst.add(sgst).add(igst);
+            BigDecimal total = inv.getTotalAmount() != null ? inv.getTotalAmount() : BigDecimal.ZERO;
+
+            sumTaxable = sumTaxable.add(taxable);
+            sumCgst = sumCgst.add(cgst);
+            sumSgst = sumSgst.add(sgst);
+            sumIgst = sumIgst.add(igst);
+            sumTotal = sumTotal.add(total);
+
+            sb.append(sl++).append(",")
+              .append("\"").append(escapeCsv(inv.getInvoiceNumber())).append("\",")
+              .append(inv.getInvoiceDate() != null ? inv.getInvoiceDate().toString() : "").append(",")
+              .append("\"").append(escapeCsv(inv.getDocumentType())).append("\",")
+              .append("\"").append(escapeCsv(inv.getPartyName())).append("\",")
+              .append("\"").append(escapeCsv(inv.getPartyGstin() != null ? inv.getPartyGstin() : "-")).append("\",")
+              .append("\"").append(escapeCsv(inv.getPartyPhone() != null ? inv.getPartyPhone() : "-")).append("\",")
+              .append("\"").append(escapeCsv(inv.getPlaceOfSupply() != null ? inv.getPlaceOfSupply() : "07")).append("\",")
+              .append(taxable.setScale(2, RoundingMode.HALF_UP)).append(",")
+              .append(cgst.setScale(2, RoundingMode.HALF_UP)).append(",")
+              .append(sgst.setScale(2, RoundingMode.HALF_UP)).append(",")
+              .append(igst.setScale(2, RoundingMode.HALF_UP)).append(",")
+              .append(totalTax.setScale(2, RoundingMode.HALF_UP)).append(",")
+              .append(inv.getRoundOff() != null ? inv.getRoundOff().setScale(2, RoundingMode.HALF_UP) : "0.00").append(",")
+              .append(total.setScale(2, RoundingMode.HALF_UP)).append(",")
+              .append("\"").append(escapeCsv(inv.getPaymentMode())).append("\",")
+              .append("\"").append(escapeCsv(inv.getPaymentStatus())).append("\"\n");
+        }
+
+        sb.append("TOTALS,,,,,,,,")
+          .append(sumTaxable.setScale(2, RoundingMode.HALF_UP)).append(",")
+          .append(sumCgst.setScale(2, RoundingMode.HALF_UP)).append(",")
+          .append(sumSgst.setScale(2, RoundingMode.HALF_UP)).append(",")
+          .append(sumIgst.setScale(2, RoundingMode.HALF_UP)).append(",")
+          .append(sumCgst.add(sumSgst).add(sumIgst).setScale(2, RoundingMode.HALF_UP)).append(",,")
+          .append(sumTotal.setScale(2, RoundingMode.HALF_UP)).append(",,\n");
+
+        return sb.toString();
+    }
+
+    private String escapeCsv(String str) {
+        if (str == null) return "";
+        return str.replace("\"", "\"\"");
+    }
+
     private String centerText(String text, int width) {
         if (text == null) return "";
         if (text.length() >= width) return text.substring(0, width);
