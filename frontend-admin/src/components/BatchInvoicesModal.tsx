@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Printer, CheckSquare, Square, Download, FileText, Building2, Phone, Mail, MapPin } from 'lucide-react';
 import { Invoice, Tenant } from '../types';
 import { getGstStateByCode } from '../data/gstStatesData';
+import { printInvoices, numberToIndianWords, formatDate } from '../utils/printInvoices';
 
 interface BatchInvoicesModalProps {
   invoices: Invoice[];
@@ -9,54 +10,6 @@ interface BatchInvoicesModalProps {
   startDate?: string;
   endDate?: string;
   onClose: () => void;
-}
-
-// Convert numbers into Indian Currency words (e.g. "INR One Thousand Four Hundred Only")
-function numberToIndianWords(num: number): string {
-  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
-  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-
-  const n = Math.floor(num);
-  if (n === 0) return 'Zero Rupees Only';
-
-  function inWords(val: number): string {
-    let str = '';
-    if (val > 19) {
-      str += b[Math.floor(val / 10)] + ' ' + a[val % 10];
-    } else {
-      str += a[val];
-    }
-    return str;
-  }
-
-  const crore = Math.floor(n / 10000000);
-  const lakh = Math.floor((n % 10000000) / 100000);
-  const thousand = Math.floor((n % 100000) / 1000);
-  const hundred = Math.floor((n % 1000) / 100);
-  const rest = Math.floor(n % 100);
-
-  let res = '';
-  if (crore > 0) res += inWords(crore) + 'Crore ';
-  if (lakh > 0) res += inWords(lakh) + 'Lakh ';
-  if (thousand > 0) res += inWords(thousand) + 'Thousand ';
-  if (hundred > 0) res += inWords(hundred) + 'Hundred ';
-  if (rest > 0) res += inWords(rest);
-
-  return 'INR ' + res.trim() + ' Only';
-}
-
-function formatDate(dateStr?: string): string {
-  if (!dateStr) return '-';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
-  } catch {
-    return dateStr;
-  }
 }
 
 export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
@@ -94,7 +47,7 @@ export const BatchInvoicesModal: React.FC<BatchInvoicesModalProps> = ({
   const selectedInvoicesToPrint = displayInvoices.filter((inv) => selectedIds.has(inv.id));
 
   const handlePrint = () => {
-    window.print();
+    printInvoices(selectedInvoicesToPrint, tenant);
   };
 
   const periodLabel = startDate && endDate ? `${formatDate(startDate)} to ${formatDate(endDate)}` : 'All Available Invoices';

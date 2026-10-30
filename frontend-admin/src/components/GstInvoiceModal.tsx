@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { X, Printer, Share2, Download, CheckCircle2, Building2, Phone, Mail, MapPin } from 'lucide-react';
 import { Invoice, Tenant } from '../types';
+import { printInvoices } from '../utils/printInvoices';
 
 interface GstInvoiceModalProps {
   invoice: Invoice;
@@ -46,7 +47,7 @@ export const GstInvoiceModal: React.FC<GstInvoiceModalProps> = ({ invoice, tenan
   const printAreaRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
-    window.print();
+    printInvoices([invoice], tenant);
   };
 
   const handleWhatsAppShare = () => {
