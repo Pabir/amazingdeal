@@ -378,31 +378,6 @@ export function MerchantLandingPage() {
     }
   };
 
-  // Instant test payment simulation bypass for dev & testing environments
-  const handleSimulatePaymentSuccess = async () => {
-    try {
-      setRazorpayLoading(true);
-      const simulatedPaymentId = 'pay_simulated_' + Date.now();
-      const mockOrderId = razorpayOrder?.orderId || 'order_mock_' + Date.now();
-      const verifyRes = await StoreApi.verifyRazorpayPayment({
-        razorpayOrderId: mockOrderId,
-        razorpayPaymentId: simulatedPaymentId,
-        razorpaySignature: 'TEST_MOCK_SIGNATURE',
-        planId: selectedPlan.id,
-        subdomain,
-      });
-
-      if (verifyRes.verified) {
-        setPaymentVerified(true);
-        setPaymentRef(verifyRes.paymentId || simulatedPaymentId);
-        setStep('STORE_SETUP');
-      }
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Simulation failed');
-    } finally {
-      setRazorpayLoading(false);
-    }
-  };
 
   const handleCreateStore = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1193,21 +1168,7 @@ export function MerchantLandingPage() {
                     </p>
                   </div>
 
-                  {/* Dev / Test Mode Simulator */}
-                  <div className="pt-3 border-t border-slate-800/80 text-center space-y-2">
-                    <div className="text-[11px] text-slate-400">
-                      Developing or testing in sandbox?
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleSimulatePaymentSuccess}
-                      disabled={razorpayLoading}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300 text-xs font-semibold border border-slate-700/60 transition-colors"
-                    >
-                      <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      <span>⚡ Test Mode: Simulate Instant Razorpay Confirmation</span>
-                    </button>
-                  </div>
+
                 </div>
 
                 <button

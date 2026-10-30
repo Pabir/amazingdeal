@@ -222,28 +222,16 @@ export class StoreApi {
   }
 
   public static async verifyRazorpayPayment(data: RazorpayVerifyRequest): Promise<RazorpayVerifyResponse> {
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/razorpay/verify-payment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        return await res.json();
-      }
-    } catch (e) {
-      console.warn('Backend razorpay/verify-payment offline, approving locally for test mode:', e);
+    const res = await fetch(`${API_BASE}/api/v1/razorpay/verify-payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      return await res.json();
     }
-
-    return {
-      verified: true,
-      status: 'PAID',
-      orderId: data.razorpayOrderId,
-      paymentId: data.razorpayPaymentId || 'pay_simulated_' + Date.now(),
-      planId: data.planId || 'MONTHLY',
-      subdomain: data.subdomain || '',
-      message: 'Verified successfully',
-    };
+    const errData = await res.json().catch(() => null);
+    throw new Error(errData?.message || 'Payment verification failed. Please complete checkout with a valid payment method.');
   }
 
   public static async getRazorpayConfig(): Promise<{ keyId: string; companyName: string; currency: string }> {

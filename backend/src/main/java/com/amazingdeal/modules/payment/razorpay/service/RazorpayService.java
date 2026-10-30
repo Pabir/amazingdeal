@@ -145,17 +145,6 @@ public class RazorpayService {
             }
         }
 
-        // Allow test simulation bypass if using test credentials or simulation tokens
-        if (!verified && (
-                "TEST_MOCK_SIGNATURE".equalsIgnoreCase(signature) ||
-                "SIMULATED_TEST_SIGNATURE".equalsIgnoreCase(signature) ||
-                (paymentId != null && paymentId.startsWith("pay_simulated_")) ||
-                (keySecret != null && keySecret.contains("test"))
-        )) {
-            log.info("Test/development mode bypass accepted for Razorpay order {} payment {}", orderId, paymentId);
-            verified = true;
-        }
-
         // Update database record if transaction found
         Optional<RazorpayTransaction> txOpt = razorpayTransactionRepository.findByOrderId(orderId);
         if (txOpt.isPresent()) {
@@ -318,15 +307,6 @@ public class RazorpayService {
             return false;
         }
 
-        // Test simulation bypass
-        if ("TEST_MOCK_SIGNATURE".equalsIgnoreCase(signature) ||
-                "SIMULATED_TEST_SIGNATURE".equalsIgnoreCase(signature) ||
-                (paymentId != null && paymentId.startsWith("pay_simulated_")) ||
-                "merchantSecretKeyTest456".equals(merchantSecret)) {
-            log.info("Test simulation bypass accepted for merchant BYOK payment: {}", paymentId);
-            return true;
-        }
-
         try {
             String payload = orderId + "|" + paymentId;
             String expected = calculateHmacSha256(payload, merchantSecret);
@@ -429,7 +409,7 @@ public class RazorpayService {
     /**
      * Helper to compute standard HMAC-SHA256 hex string.
      */
-    private String calculateHmacSha256(String data, String secret) throws Exception {
+    public String calculateHmacSha256(String data, String secret) throws Exception {
         Mac mac = Mac.getInstance("HmacSHA256");
         SecretKeySpec secretKeySpec = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
         mac.init(secretKeySpec);

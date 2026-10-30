@@ -121,7 +121,7 @@ public class PaymentAndShippingIntegrationTest {
     @Test
     @org.junit.jupiter.api.Order(2)
     @DisplayName("2. Test Razorpay BYOK Order Creation & Verification")
-    void testRazorpayByokFlow() {
+    void testRazorpayByokFlow() throws Exception {
         Tenant tenant = tenantRepository.findById(testTenantId).orElseThrow();
 
         // 1. Merchant order creation
@@ -139,15 +139,28 @@ public class PaymentAndShippingIntegrationTest {
         assertEquals(79900L, rzpRes.getAmountInPaise());
         log("Razorpay BYOK Order created: " + rzpRes.getOrderId() + " with merchant Key: " + rzpRes.getKeyId());
 
-        // 2. Merchant signature verification test
+        // 2. Merchant signature verification test with genuine HMAC-SHA256
+        String testPaymentId = "pay_test_998877";
+        String merchantSecret = "merchantSecretKeyTest456";
+        String validSignature = razorpayService.calculateHmacSha256(rzpRes.getOrderId() + "|" + testPaymentId, merchantSecret);
+
         boolean verified = razorpayService.verifyMerchantPayment(
                 tenant,
                 rzpRes.getOrderId(),
-                "pay_simulated_998877",
+                testPaymentId,
+                validSignature
+        );
+        assertTrue(verified, "Payment verification should pass cryptographic HMAC-SHA256 signature check");
+
+        // Verify forged or simulated signatures are strictly rejected
+        boolean forgedCheck = razorpayService.verifyMerchantPayment(
+                tenant,
+                rzpRes.getOrderId(),
+                testPaymentId,
                 "SIMULATED_TEST_SIGNATURE"
         );
-        assertTrue(verified, "Payment verification should pass simulation check");
-        log("Razorpay BYOK Payment Signature Verified: TRUE");
+        assertFalse(forgedCheck, "Forged or simulated payment signature must be strictly rejected");
+        log("Razorpay BYOK Payment Signature Verified: TRUE (Forged Rejected: TRUE)");
     }
 
     @Test
