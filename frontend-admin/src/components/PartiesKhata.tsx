@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { 
   Users, UserPlus, Search, Phone, Mail, MapPin, Building2, 
   ArrowUpRight, ArrowDownLeft, Share2, Edit2, Trash2, ShieldCheck, 
-  AlertCircle, X, Check, Clock
+  AlertCircle, X, Check, Clock, ChevronDown
 } from 'lucide-react';
 import { Party, Tenant } from '../types';
 import { ApiService } from '../services/api';
+import { GST_INDIAN_STATES } from '../data/gstStatesData';
 
 interface PartiesKhataProps {
   tenant: Tenant | null;
@@ -495,13 +496,23 @@ _${tenant?.storeName || 'AmazingDeal Merchant'}_`;
                 </div>
                 <div>
                   <label className="font-semibold text-slate-700">State Code (POS)</label>
-                  <input
-                    type="text"
-                    placeholder="2-digit state code (e.g. 07)"
-                    value={formData.billingStateCode}
-                    onChange={(e) => setFormData({ ...formData, billingStateCode: e.target.value })}
-                    className="w-full mt-1 p-2 bg-slate-50 border border-slate-300 rounded-lg font-mono focus:bg-white"
-                  />
+                  <div className="relative mt-1">
+                    <select
+                      value={formData.billingStateCode ? formData.billingStateCode.slice(0, 2) : ''}
+                      onChange={(e) => setFormData({ ...formData, billingStateCode: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-medium focus:bg-white focus:outline-none appearance-none pr-8 cursor-pointer"
+                    >
+                      <option value="">Select State</option>
+                      {GST_INDIAN_STATES.map((s) => (
+                        <option key={s.code} value={s.code}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                      <ChevronDown className="w-4 h-4" />
+                    </div>
+                  </div>
                 </div>
               </div>
 

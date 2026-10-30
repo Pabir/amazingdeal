@@ -3,10 +3,11 @@ import { Tenant, ChatGptStatus } from '../types';
 import {
   QrCode, Truck, Clock, MapPin, Save, ShieldCheck, Sparkles, Key, CheckCircle2,
   Unlink, RefreshCw, ExternalLink, Check, Tag, CreditCard, Lock, Package,
-  Send, Smartphone, AlertCircle, Building, Receipt, Zap, Globe
+  Send, Smartphone, AlertCircle, Building, Receipt, Zap, Globe, ChevronDown
 } from 'lucide-react';
 import { ApiService } from '../services/api';
 import { MASTER_STORE_CATEGORIES } from '../data/categoriesData';
+import { GST_INDIAN_STATES } from '../data/gstStatesData';
 
 const BANK_PREFIX_MAP: Record<string, string> = {
   SBIN: 'State Bank of India',
@@ -1195,16 +1196,25 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  State Code (2-digit GST)
+                  State Code (2-Digit GST)
                 </label>
-                <input
-                  type="text"
-                  maxLength={2}
-                  value={stateCode}
-                  onChange={(e) => setStateCode(e.target.value)}
-                  placeholder="29"
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm font-mono"
-                />
+                <div className="relative">
+                  <select
+                    value={stateCode.slice(0, 2)}
+                    onChange={(e) => setStateCode(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 appearance-none pr-8 cursor-pointer"
+                  >
+                    <option value="">Select State Code</option>
+                    {GST_INDIAN_STATES.map((s) => (
+                      <option key={s.code} value={s.code}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                    <ChevronDown className="w-4 h-4" />
+                  </div>
+                </div>
               </div>
             </div>
 

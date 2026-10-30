@@ -154,7 +154,13 @@ public class AdminSettingsController {
         // GST & Bank details
         if (req.containsKey("gstin")) t.setGstin(req.get("gstin") != null ? req.get("gstin").toString().trim() : null);
         if (req.containsKey("pan")) t.setPan(req.get("pan") != null ? req.get("pan").toString().trim() : null);
-        if (req.containsKey("stateCode")) t.setStateCode(req.get("stateCode") != null ? req.get("stateCode").toString().trim() : null);
+        if (req.containsKey("stateCode")) {
+            String sc = req.get("stateCode") != null ? req.get("stateCode").toString().trim() : null;
+            if (sc != null && sc.length() > 2) {
+                sc = sc.substring(0, 2);
+            }
+            t.setStateCode(sc);
+        }
         if (req.containsKey("invoicePrefix")) t.setInvoicePrefix(req.get("invoicePrefix") != null ? req.get("invoicePrefix").toString().trim() : "INV-");
         if (req.containsKey("invoiceTerms")) t.setInvoiceTerms(req.get("invoiceTerms") != null ? req.get("invoiceTerms").toString().trim() : null);
         if (req.containsKey("bankName")) t.setBankName(req.get("bankName") != null ? req.get("bankName").toString().trim() : null);

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Product, Party, Invoice, InvoiceItem, Tenant } from '../types';
 import { ApiService } from '../services/api';
+import { GST_INDIAN_STATES } from '../data/gstStatesData';
 
 interface PosCounterProps {
   tenant: Tenant | null;
@@ -15,26 +16,6 @@ interface PosCounterProps {
   onOpenThermalReceipt: (invoice: Invoice) => void;
   onRefreshParties?: () => void;
 }
-
-const INDIAN_STATES = [
-  { code: '07', name: 'Delhi' },
-  { code: '27', name: 'Maharashtra' },
-  { code: '09', name: 'Uttar Pradesh' },
-  { code: '29', name: 'Karnataka' },
-  { code: '33', name: 'Tamil Nadu' },
-  { code: '19', name: 'West Bengal' },
-  { code: '24', name: 'Gujarat' },
-  { code: '08', name: 'Rajasthan' },
-  { code: '23', name: 'Madhya Pradesh' },
-  { code: '06', name: 'Haryana' },
-  { code: '03', name: 'Punjab' },
-  { code: '36', name: 'Telangana' },
-  { code: '37', name: 'Andhra Pradesh' },
-  { code: '32', name: 'Kerala' },
-  { code: '10', name: 'Bihar' },
-  { code: '21', name: 'Odisha' },
-  { code: '18', name: 'Assam' },
-];
 
 export const PosCounter: React.FC<PosCounterProps> = ({
   tenant,
@@ -431,9 +412,9 @@ export const PosCounter: React.FC<PosCounterProps> = ({
               onChange={(e) => setPlaceOfSupply(e.target.value)}
               className="text-xs px-2 py-1 bg-white border border-slate-300 rounded-lg text-slate-700"
             >
-              {INDIAN_STATES.map(s => (
+              {GST_INDIAN_STATES.map(s => (
                 <option key={s.code} value={s.code}>
-                  {s.code} - {s.name}
+                  {s.label}
                 </option>
               ))}
             </select>
