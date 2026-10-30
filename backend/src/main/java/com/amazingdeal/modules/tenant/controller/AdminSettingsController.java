@@ -6,12 +6,20 @@ import com.amazingdeal.modules.shipping.shiprocket.service.ShiprocketService;
 import com.amazingdeal.modules.tenant.model.Tenant;
 import com.amazingdeal.modules.tenant.repository.TenantRepository;
 import com.amazingdeal.multitenancy.TenantContext;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.*;
 
 @Slf4j
@@ -24,6 +32,9 @@ public class AdminSettingsController {
     private final AesCryptoUtil aesCryptoUtil;
     private final RazorpayService razorpayService;
     private final ShiprocketService shiprocketService;
+
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String MASKED = "●●●●●●●●";
 
@@ -304,6 +315,58 @@ public class AdminSettingsController {
             }
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/lookup-ifsc")
+    public ResponseEntity<?> lookupIfsc(@RequestParam("code") String code) {
+        if (code == null || code.isBlank() || code.trim().length() != 11) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "IFSC code must be exactly 11 characters"
+            ));
+        }
+
+        String cleanCode = code.trim().toUpperCase();
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://ifsc.razorpay.com/" + cleanCode))
+                    .header("Accept", "application/json")
+                    .header("User-Agent", "AmazingDeal-Hyperlocal/1.0")
+                    .timeout(Duration.ofSeconds(6))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonNode node = objectMapper.readTree(response.body());
+                String bank = node.path("BANK").asText("");
+                String branch = node.path("BRANCH").asText("");
+                String city = node.path("CITY").asText("");
+                String state = node.path("STATE").asText("");
+                String district = node.path("DISTRICT").asText("");
+
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "bank", bank,
+                        "branch", branch,
+                        "city", city,
+                        "state", state,
+                        "district", district,
+                        "ifsc", cleanCode
+                ));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                        "success", false,
+                        "message", "IFSC code '" + cleanCode + "' was not found."
+                ));
+            }
+        } catch (Exception e) {
+            log.warn("IFSC lookup failed for {}: {}", cleanCode, e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                    "success", false,
+                    "message", "IFSC lookup service unavailable: " + e.getMessage()
+            ));
         }
     }
 }

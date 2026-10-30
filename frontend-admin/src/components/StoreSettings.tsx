@@ -8,6 +8,47 @@ import {
 import { ApiService } from '../services/api';
 import { MASTER_STORE_CATEGORIES } from '../data/categoriesData';
 
+const BANK_PREFIX_MAP: Record<string, string> = {
+  SBIN: 'State Bank of India',
+  HDFC: 'HDFC Bank',
+  ICIC: 'ICICI Bank',
+  PUNB: 'Punjab National Bank',
+  BARB: 'Bank of Baroda',
+  UTIB: 'Axis Bank',
+  CNRB: 'Canara Bank',
+  UBIN: 'Union Bank of India',
+  BKID: 'Bank of India',
+  IOBA: 'Indian Overseas Bank',
+  KKBK: 'Kotak Mahindra Bank',
+  YESB: 'Yes Bank',
+  IDFB: 'IDFC First Bank',
+  INDB: 'IndusInd Bank',
+  FDRL: 'Federal Bank',
+  CBIN: 'Central Bank of India',
+  MAHB: 'Bank of Maharashtra',
+  PSIB: 'Punjab & Sind Bank',
+  UCOB: 'UCO Bank',
+  BDBL: 'Bandhan Bank',
+  AUBL: 'AU Small Finance Bank',
+  ESFB: 'Equitas Small Finance Bank',
+  JSFB: 'Jana Small Finance Bank',
+  UJJV: 'Ujjivan Small Finance Bank',
+  AIRP: 'Airtel Payments Bank',
+  PYTM: 'Paytm Payments Bank',
+  IPOS: 'India Post Payments Bank',
+  JAKA: 'Jammu & Kashmir Bank',
+  KVBL: 'Karur Vysya Bank',
+  SIBL: 'South Indian Bank',
+  CSBK: 'CSB Bank',
+  DCBL: 'DCB Bank',
+  RBLN: 'RBL Bank',
+  TMBL: 'Tamilnad Mercantile Bank',
+  SCBL: 'Standard Chartered Bank',
+  CITI: 'Citibank',
+  HSBC: 'HSBC Bank',
+  DBSS: 'DBS Bank',
+};
+
 interface StoreSettingsProps {
   tenant: Tenant | null;
   onSave: (updated: Partial<Tenant>) => Promise<void> | void;
@@ -87,6 +128,8 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
   const [bankAccountNumber, setBankAccountNumber] = useState(tenant?.bankAccountNumber || '');
   const [bankIfsc, setBankIfsc] = useState(tenant?.bankIfsc || '');
   const [bankBranch, setBankBranch] = useState(tenant?.bankBranch || '');
+  const [ifscLoading, setIfscLoading] = useState(false);
+  const [ifscStatus, setIfscStatus] = useState<{ success: boolean; message?: string; details?: string } | null>(null);
 
   // AI & Multi-Provider State
   const [aiStatus, setAiStatus] = useState<ChatGptStatus | null>(null);
@@ -220,6 +263,65 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
       setShiprocketTestStatus({ success: false, msg: err.message || 'Shiprocket authentication failed' });
     } finally {
       setTestingShiprocket(false);
+    }
+  };
+
+  const handleIfscLookup = async (code: string) => {
+    const clean = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (clean.length !== 11) {
+      setIfscStatus(null);
+      return;
+    }
+
+    setIfscLoading(true);
+    setIfscStatus(null);
+    try {
+      const res = await ApiService.lookupIfsc(clean);
+      if (res.success && res.bank) {
+        setBankName(res.bank);
+        const branchStr = res.branch
+          ? `${res.branch}${res.city ? ` (${res.city})` : ''}`
+          : (res.city || '');
+        if (branchStr) {
+          setBankBranch(branchStr);
+        }
+        setIfscStatus({
+          success: true,
+          details: `${res.bank} • ${branchStr || 'Branch Verified'}`
+        });
+      } else {
+        setIfscStatus({
+          success: false,
+          message: res.message || 'IFSC code not found in RBI registry.'
+        });
+      }
+    } catch (err: any) {
+      setIfscStatus({
+        success: false,
+        message: err.message || 'Failed to verify IFSC'
+      });
+    } finally {
+      setIfscLoading(false);
+    }
+  };
+
+  const handleIfscChange = (val: string) => {
+    const clean = val.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11);
+    setBankIfsc(clean);
+
+    // Instant bank name prefix matching while typing
+    if (clean.length >= 4) {
+      const prefix = clean.substring(0, 4);
+      if (BANK_PREFIX_MAP[prefix] && (!bankName || Object.values(BANK_PREFIX_MAP).includes(bankName))) {
+        setBankName(BANK_PREFIX_MAP[prefix]);
+      }
+    }
+
+    // Auto-fetch branch when full 11 digits are entered
+    if (clean.length === 11) {
+      handleIfscLookup(clean);
+    } else {
+      setIfscStatus(null);
     }
   };
 
@@ -1066,9 +1168,14 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                   type="text"
                   maxLength={15}
                   value={gstin}
-                  onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 15);
+                    setGstin(val);
+                    if (val.length >= 2) setStateCode(val.substring(0, 2));
+                    if (val.length >= 12) setPan(val.substring(2, 12));
+                  }}
                   placeholder="29AAAAA0000A1Z5"
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm font-mono"
+                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm font-mono uppercase"
                 />
               </div>
 
@@ -1082,7 +1189,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                   value={pan}
                   onChange={(e) => setPan(e.target.value.toUpperCase())}
                   placeholder="ABCDE1234F"
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm font-mono"
+                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm font-mono uppercase"
                 />
               </div>
 
@@ -1109,15 +1216,22 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Bank Name
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Bank Name
+                    </label>
+                    {bankName && ifscStatus?.success && (
+                      <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Auto-Filled
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
                     placeholder="HDFC Bank / State Bank of India"
-                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm"
+                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
                   />
                 </div>
 
@@ -1130,34 +1244,84 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({ tenant, onSave }) 
                     value={bankAccountNumber}
                     onChange={(e) => setBankAccountNumber(e.target.value)}
                     placeholder="50200012345678"
-                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm font-mono"
+                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    IFSC Code
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={11}
-                    value={bankIfsc}
-                    onChange={(e) => setBankIfsc(e.target.value.toUpperCase())}
-                    placeholder="HDFC0001234"
-                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm font-mono"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      IFSC Code
+                    </label>
+                    {ifscLoading && (
+                      <span className="text-[11px] text-purple-600 flex items-center gap-1 font-semibold">
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        Fetching Bank Details...
+                      </span>
+                    )}
+                    {ifscStatus?.success && (
+                      <span className="text-[11px] text-emerald-600 flex items-center gap-1 font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        Verified
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      maxLength={11}
+                      value={bankIfsc}
+                      onChange={(e) => handleIfscChange(e.target.value)}
+                      onBlur={() => {
+                        if (bankIfsc.length === 11 && !ifscStatus?.success) {
+                          handleIfscLookup(bankIfsc);
+                        }
+                      }}
+                      placeholder="e.g. SBIN0001295"
+                      className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm font-mono uppercase focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                    />
+                    {bankIfsc.length === 11 && !ifscLoading && (
+                      <button
+                        type="button"
+                        onClick={() => handleIfscLookup(bankIfsc)}
+                        title="Re-verify IFSC"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-purple-600 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition-colors"
+                      >
+                        Auto-Fill
+                      </button>
+                    )}
+                  </div>
+                  {ifscStatus && !ifscStatus.success && (
+                    <p className="text-[11px] text-rose-600 mt-1 flex items-center gap-1 font-medium">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{ifscStatus.message}</span>
+                    </p>
+                  )}
+                  {ifscStatus?.success && ifscStatus.details && (
+                    <p className="text-[11px] text-emerald-700 mt-1 flex items-center gap-1 font-medium">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+                      <span>{ifscStatus.details}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Branch Name
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Branch Name
+                    </label>
+                    {bankBranch && ifscStatus?.success && (
+                      <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Auto-Filled
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={bankBranch}
                     onChange={(e) => setBankBranch(e.target.value)}
                     placeholder="Indiranagar Branch"
-                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm"
+                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
                   />
                 </div>
               </div>

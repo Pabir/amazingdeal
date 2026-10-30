@@ -458,4 +458,55 @@ export class ApiService {
       body: JSON.stringify({ riderName, riderPhone }),
     });
   }
+
+  // Bank & IFSC Details Lookup
+  public static async lookupIfsc(code: string): Promise<{
+    success: boolean;
+    bank?: string;
+    branch?: string;
+    city?: string;
+    state?: string;
+    district?: string;
+    message?: string;
+  }> {
+    const clean = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!clean || clean.length !== 11) {
+      return { success: false, message: 'IFSC must be exactly 11 characters' };
+    }
+
+    // 1. Direct browser fetch to open-source Razorpay IFSC API with instant CORS
+    try {
+      const res = await fetch(`https://ifsc.razorpay.com/${clean}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          success: true,
+          bank: data.BANK,
+          branch: data.BRANCH,
+          city: data.CITY,
+          district: data.DISTRICT,
+          state: data.STATE,
+        };
+      }
+    } catch (e) {
+      console.warn('Direct IFSC lookup failed, falling back to backend:', e);
+    }
+
+    // 2. Resilient fallback to backend proxy endpoint
+    try {
+      return await this.request<{
+        success: boolean;
+        bank?: string;
+        branch?: string;
+        city?: string;
+        state?: string;
+        district?: string;
+        message?: string;
+      }>(`/api/v1/admin/settings/lookup-ifsc?code=${clean}`);
+    } catch (e: any) {
+      return { success: false, message: e.message || 'IFSC code not found' };
+    }
+  }
 }
