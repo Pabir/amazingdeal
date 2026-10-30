@@ -312,7 +312,7 @@ export function MerchantLandingPage() {
       }
 
       const options = {
-        key: order.keyId || 'rzp_test_TM5arepb23gG9I',
+        key: order.keyId,
         amount: order.amountInPaise,
         currency: order.currency || 'INR',
         name: order.companyName || 'AmazingDeal',

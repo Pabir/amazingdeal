@@ -42,10 +42,10 @@ public class RazorpayService {
     @Autowired(required = false)
     private RazorpayClient razorpayClient;
 
-    @Value("${app.razorpay.key-id:rzp_test_TM5arepb23gG9I}")
+    @Value("${app.razorpay.key-id:}")
     private String keyId;
 
-    @Value("${app.razorpay.key-secret:2fbcu6X8Xkf26eKrPR8RkIGL}")
+    @Value("${app.razorpay.key-secret:}")
     private String keySecret;
 
     @Value("${app.razorpay.webhook-secret:whsec_amazingdeal2026}")

@@ -23,7 +23,7 @@ public class RazorpayController {
 
     private final RazorpayService razorpayService;
 
-    @Value("${app.razorpay.key-id:rzp_test_TM5arepb23gG9I}")
+    @Value("${app.razorpay.key-id:}")
     private String keyId;
 
     @Value("${app.razorpay.company-name:AmazingDeal}")

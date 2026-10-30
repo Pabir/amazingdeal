@@ -190,35 +190,16 @@ export class StoreApi {
   }
 
   public static async createRazorpayOrder(data: RazorpayCreateOrderRequest): Promise<RazorpayCreateOrderResponse> {
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/razorpay/create-order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        return await res.json();
-      }
-    } catch (e) {
-      console.warn('Backend razorpay/create-order failed, using resilient fallback:', e);
+    const res = await fetch(`${API_BASE}/api/v1/razorpay/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      return await res.json();
     }
-
-    // High-resilience client-side fallback if backend is momentarily unreachable
-    const orderId = 'order_mock_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-    return {
-      orderId,
-      keyId: 'rzp_test_TM5arepb23gG9I',
-      amountInPaise: Math.round(data.amount * 100),
-      amountInRupees: data.amount,
-      currency: data.currency || 'INR',
-      planId: data.planId,
-      subdomain: data.subdomain || '',
-      storeName: data.storeName || '',
-      customerName: data.firstname,
-      customerEmail: data.email || '',
-      customerPhone: data.phone || '',
-      companyName: 'AmazingDeal',
-    };
+    const errData = await res.json().catch(() => null);
+    throw new Error(errData?.message || 'Failed to initialize payment order with gateway.');
   }
 
   public static async verifyRazorpayPayment(data: RazorpayVerifyRequest): Promise<RazorpayVerifyResponse> {
@@ -235,19 +216,12 @@ export class StoreApi {
   }
 
   public static async getRazorpayConfig(): Promise<{ keyId: string; companyName: string; currency: string }> {
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/razorpay/config`);
-      if (res.ok) {
-        return await res.json();
-      }
-    } catch (e) {
-      // quiet fallback
+    const res = await fetch(`${API_BASE}/api/v1/razorpay/config`);
+    if (res.ok) {
+      return await res.json();
     }
-    return {
-      keyId: 'rzp_test_TM5arepb23gG9I',
-      companyName: 'AmazingDeal',
-      currency: 'INR',
-    };
+    const errData = await res.json().catch(() => null);
+    throw new Error(errData?.message || 'Failed to retrieve payment configuration.');
   }
 
 

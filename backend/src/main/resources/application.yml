@@ -66,8 +66,8 @@ app:
       api-token: ${WHATSAPP_API_TOKEN:}
       phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
   razorpay:
-    key-id: ${RAZORPAY_KEY_ID:rzp_test_TM5arepb23gG9I}
-    key-secret: ${RAZORPAY_KEY_SECRET:2fbcu6X8Xkf26eKrPR8RkIGL}
+    key-id: ${RAZORPAY_KEY_ID:}
+    key-secret: ${RAZORPAY_KEY_SECRET:}
     webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:whsec_amazingdeal2026}
     currency: ${RAZORPAY_CURRENCY:INR}
     company-name: ${RAZORPAY_COMPANY_NAME:AmazingDeal}

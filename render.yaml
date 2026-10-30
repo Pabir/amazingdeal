@@ -34,6 +34,6 @@ services:
       - key: R2_BUCKET_NAME
         value: amazingdeal-media
       - key: RAZORPAY_KEY_ID
-        value: rzp_test_TM5arepb23gG9I
+        sync: false
       - key: RAZORPAY_KEY_SECRET
-        value: 2fbcu6X8Xkf26eKrPR8RkIGL
+        sync: false
