@@ -621,6 +621,53 @@ public class AiCatalogGeneratorService {
                     .build();
         }
 
+        // Pathology / Diagnostic Lab / Medical Reports detection
+        if (context.contains("patholog") || context.contains("diagnostic") || context.contains("blood test") || 
+            context.contains("urine") || context.contains("x-ray") || context.contains("xray") || 
+            context.contains("ct scan") || context.contains("mri") || context.contains("ultrasound") || 
+            context.contains("sonography") || context.contains("ecg") || context.contains("medical report") ||
+            context.contains("health checkup")) {
+            
+            String title = "Complete Blood Count (CBC) with Automated ESR Profile";
+            String cat = "Blood Tests";
+            if (context.contains("mri")) {
+                title = "MRI Brain / Head with 3D TOF Angiography (3.0 Tesla)";
+                cat = "MRI Scan";
+            } else if (context.contains("ct")) {
+                title = "HRCT Chest / Lungs (High-Resolution Computed Tomography)";
+                cat = "CT Scan";
+            } else if (context.contains("x-ray") || context.contains("xray")) {
+                title = "Digital Chest X-Ray (High Frequency PA View)";
+                cat = "Digital X-Ray";
+            } else if (context.contains("urine")) {
+                title = "Routine Urine Analysis & Microscopy (Urine R/M)";
+                cat = "Urine & Stool Tests";
+            } else if (context.contains("checkup") || context.contains("package")) {
+                title = "Master Full Body Health Checkup Package (75+ Parameters)";
+                cat = "Health Checkup Packages";
+            }
+
+            List<AiPhotoAngle> angles = resolveAnglesForProduct(title, cat, displayImg);
+            String imagesJson = serializeAngles(angles);
+
+            return GeneratedProductResponse.builder()
+                    .title(title)
+                    .description("NABL-accredited diagnostic screening with calibrated multi-channel analyzers. Detailed clinical interpretation and digital PDF report delivered via WhatsApp & Email within 4 to 6 hours.")
+                    .category(cat)
+                    .suggestedPrice(BigDecimal.valueOf(cat.contains("MRI") ? 4500.0 : (cat.contains("CT") ? 2800.0 : (cat.contains("Packages") ? 1999.0 : 350.0))))
+                    .comparePrice(BigDecimal.valueOf(cat.contains("MRI") ? 6500.0 : (cat.contains("CT") ? 4000.0 : (cat.contains("Packages") ? 4500.0 : 500.0))))
+                    .tags(List.of("Pathology", "Diagnostic Test", cat, "Medical Report", "Health Checkup"))
+                    .keyHighlights(List.of("NABL Quality Standard Certified", "Same-Day Verified Digital Report", "Home Sample Collection Available"))
+                    .ingredientsOrSpecs("NABL Accredited Lab Protocol, Digital Barcoded Sample")
+                    .estimatedUnit(cat.contains("Scan") || cat.contains("X-Ray") ? "1 Scan & DICOM Film" : "1 Patient Test")
+                    .inventoryQuantity(999)
+                    .imageUrl(displayImg)
+                    .angles(angles)
+                    .imagesJson(imagesJson)
+                    .poweredBy("Demo Mode (Pathology & Diagnostics Preset)")
+                    .build();
+        }
+
         // Default Groceries fallback
         String cat = request.getPreferredCategory() != null && !request.getPreferredCategory().isBlank()
                 ? request.getPreferredCategory()

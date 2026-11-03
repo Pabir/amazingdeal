@@ -602,7 +602,7 @@ export function MerchantLandingPage() {
           </h1>
 
           <p className="mt-4 sm:mt-6 text-sm sm:text-base lg:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Turn your local grocery, supermarket, pharmacy, or retail shop into an e-commerce powerhouse.
+            Turn your local grocery, supermarket, pharmacy, pathology lab, or retail shop into an e-commerce powerhouse.
             Accept instant customer UPI payments directly, manage orders with a live Kanban board, and print thermal
             receipts on the spot.
           </p>

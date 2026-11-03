@@ -34,6 +34,21 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ products, onRefr
   // Pre-load items matching the merchant's store verticals
   const storeItemPool = getItemsForCategories(storeCategory);
   const matchingTitleSuggestions = searchCatalogSuggestions(title, storeCategory);
+  const quickCategoryChips = Array.from(
+    new Set([
+      ...storeItemPool.map((i) => i.category),
+      'Blood Tests',
+      'Urine & Stool Tests',
+      'Digital X-Ray',
+      'CT Scan',
+      'MRI Scan',
+      'Ultrasound & Sonography',
+      'Health Checkup Packages',
+      'Grains & Flours',
+      'Cooking Oils',
+      'Dairy & Milk',
+    ])
+  ).slice(0, 14);
 
   const handleSelectSuggestedItem = (item: CatalogItemSuggestion) => {
     setTitle(item.title);
@@ -447,7 +462,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ products, onRefr
                   />
                   {/* Category Quick Chips */}
                   <div className="flex flex-wrap gap-1 mt-1.5">
-                    {['Grains & Flours', 'Cooking Oils', 'Dairy & Milk', 'Beverages', 'Instant Food', 'Men Fashion', 'Audio & Tech'].map((catChip) => (
+                    {quickCategoryChips.map((catChip) => (
                       <button
                         key={catChip}
                         type="button"
