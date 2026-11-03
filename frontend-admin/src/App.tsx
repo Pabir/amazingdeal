@@ -78,28 +78,38 @@ export function App() {
     if (!isAuthenticated) return;
 
     try {
+      // 0. Fetch Store Settings / Profile
+      try {
+        const storeProfile = await ApiService.getSettings();
+        if (storeProfile && storeProfile.id) {
+          setTenant(storeProfile);
+        }
+      } catch (e) {
+        console.warn('Store profile fetch:', e);
+      }
+
       // 1. Fetch Orders
       const orderList = await ApiService.getOrders();
-      setOrders(orderList);
+      setOrders(orderList || []);
 
       // Play chime if new order placed
-      if (soundEnabled && prevOrderCountRef.current > 0 && orderList.length > prevOrderCountRef.current) {
+      if (soundEnabled && prevOrderCountRef.current > 0 && orderList && orderList.length > prevOrderCountRef.current) {
         playOrderChime();
       }
-      prevOrderCountRef.current = orderList.length;
+      prevOrderCountRef.current = orderList ? orderList.length : 0;
 
       // 2. Fetch Stats
       const statData = await ApiService.getOrderStats();
-      setStats(statData);
+      if (statData) setStats(statData);
 
       // 3. Fetch Products
       const prodList = await ApiService.getProducts();
-      setProducts(prodList);
+      setProducts(prodList || []);
 
       // 4. Fetch Invoices
       try {
         const invList = await ApiService.getInvoices();
-        setInvoices(invList);
+        setInvoices(invList || []);
       } catch (e) {
         console.warn('Invoices fetch fallback:', e);
       }
@@ -107,201 +117,12 @@ export function App() {
       // 5. Fetch Parties
       try {
         const partyList = await ApiService.getParties();
-        setParties(partyList);
+        setParties(partyList || []);
       } catch (e) {
         console.warn('Parties fetch fallback:', e);
       }
     } catch (err: any) {
-      console.warn('Dashboard data fetch fallback:', err.message);
-      // Demo fallback data if API is initializing
-      seedDemoDataIfEmpty();
-    }
-  };
-
-  const seedDemoDataIfEmpty = () => {
-    if (orders.length === 0) {
-      setOrders([
-        {
-          id: 'ord-101',
-          orderNumber: '#ORD-101',
-          storeName: tenant?.storeName || 'Sharma Kirana Store',
-          customerName: 'Aarav Mehta',
-          customerPhone: '9820123456',
-          deliveryAddress: 'Flat 402, Sunshine Heights, Civil Lines',
-          deliveryType: 'DELIVERY',
-          paymentMethod: 'UPI_ONLINE',
-          paymentStatus: 'PAID',
-          orderStatus: 'PLACED',
-          totalAmount: 311.00,
-          deliveryCharge: 0.00,
-          items: [
-            { title: 'Fresh Farm Dairy Milk (1L)', price: 66.0, quantity: 1, itemTotal: 66.0 },
-            { title: 'Whole Wheat Atta (5kg)', price: 245.0, quantity: 1, itemTotal: 245.0 }
-          ],
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 'ord-100',
-          orderNumber: '#ORD-100',
-          storeName: tenant?.storeName || 'Sharma Kirana Store',
-          customerName: 'Pooja Verma',
-          customerPhone: '9811223344',
-          deliveryAddress: 'Store Pickup',
-          deliveryType: 'PICKUP',
-          paymentMethod: 'COD',
-          paymentStatus: 'PAID',
-          orderStatus: 'DELIVERED',
-          totalAmount: 140.00,
-          deliveryCharge: 0.00,
-          items: [
-            { title: 'Organic Premium Basmati Rice (1kg)', price: 140.0, quantity: 1, itemTotal: 140.0 }
-          ],
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-        }
-      ]);
-      setStats({
-        totalOrders: 2,
-        placedOrders: 1,
-        acceptedOrders: 0,
-        deliveredOrders: 1,
-        totalRevenue: 451.00,
-      });
-      setProducts([
-        {
-          id: 'prod-1',
-          title: 'Fresh Farm Dairy Milk (1L)',
-          price: 66.0,
-          comparePrice: 70.0,
-          category: 'Dairy & Eggs',
-          hsnSac: '0401',
-          gstRate: 5,
-          barcode: '890103000101',
-          unit: 'litre',
-          inventoryQuantity: 45,
-          tracksInventory: true,
-          status: 'ACTIVE',
-          imageUrl: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=600&q=80',
-        },
-        {
-          id: 'prod-2',
-          title: 'Whole Wheat Atta (5kg)',
-          price: 245.0,
-          comparePrice: 280.0,
-          category: 'Grains & Flours',
-          hsnSac: '1101',
-          gstRate: 5,
-          barcode: '890103000102',
-          unit: 'pcs',
-          inventoryQuantity: 28,
-          tracksInventory: true,
-          status: 'ACTIVE',
-          imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80',
-        },
-        {
-          id: 'prod-3',
-          title: 'Organic Premium Basmati Rice (1kg)',
-          price: 140.0,
-          comparePrice: 160.0,
-          category: 'Grains & Flours',
-          hsnSac: '1006',
-          gstRate: 5,
-          barcode: '890103000103',
-          unit: 'pcs',
-          inventoryQuantity: 35,
-          tracksInventory: true,
-          status: 'ACTIVE',
-          imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80',
-        }
-      ]);
-      setParties([
-        {
-          id: 'pty-1',
-          partyType: 'CUSTOMER',
-          partyName: 'Aarav Mehta',
-          companyName: 'Mehta Textiles',
-          phone: '9820123456',
-          email: 'aarav@mehta.in',
-          gstin: '07AAACM1234A1Z5',
-          billingAddress: 'Flat 402, Sunshine Heights, Civil Lines, Delhi',
-          billingStateCode: '07',
-          currentBalance: 1250.00, // Lene Hain
-          creditLimit: 10000,
-          creditPeriodDays: 30,
-        },
-        {
-          id: 'pty-2',
-          partyType: 'CUSTOMER',
-          partyName: 'Pooja Verma',
-          phone: '9811223344',
-          billingAddress: 'C-12, Sector 15, Rohini, Delhi',
-          billingStateCode: '07',
-          currentBalance: 0.00,
-          creditLimit: 5000,
-          creditPeriodDays: 15,
-        },
-        {
-          id: 'pty-3',
-          partyType: 'SUPPLIER',
-          partyName: 'Aggarwal Flour & Grain Mill',
-          companyName: 'Aggarwal Agro Industries Ltd',
-          phone: '9899001122',
-          gstin: '07AAGCA9876B1Z2',
-          billingAddress: 'Naya Bazaar, Old Delhi',
-          billingStateCode: '07',
-          currentBalance: -4500.00, // Dene Hain
-          creditLimit: 50000,
-          creditPeriodDays: 45,
-        }
-      ]);
-      setInvoices([
-        {
-          id: 'inv-1001',
-          invoiceNumber: 'INV-2026-0001',
-          partyName: 'Aarav Mehta',
-          partyPhone: '9820123456',
-          partyGstin: '07AAACM1234A1Z5',
-          documentType: 'TAX_INVOICE',
-          invoiceDate: new Date().toISOString().split('T')[0],
-          placeOfSupply: '07',
-          subtotal: 1060.00,
-          cgstAmount: 26.50,
-          sgstAmount: 26.50,
-          igstAmount: 0.00,
-          roundOff: 0.00,
-          totalAmount: 1113.00,
-          paidAmount: 1113.00,
-          balanceDue: 0.00,
-          paymentStatus: 'PAID',
-          paymentMode: 'UPI',
-          items: [
-            {
-              itemName: 'Whole Wheat Atta (5kg)',
-              hsnSac: '1101',
-              quantity: 2,
-              unit: 'pcs',
-              unitPrice: 245.0,
-              discountPct: 0,
-              gstRate: 5,
-              cgstAmount: 12.25,
-              sgstAmount: 12.25,
-              totalAmount: 514.50,
-            },
-            {
-              itemName: 'Organic Premium Basmati Rice (1kg)',
-              hsnSac: '1006',
-              quantity: 4,
-              unit: 'pcs',
-              unitPrice: 140.0,
-              discountPct: 0,
-              gstRate: 5,
-              cgstAmount: 14.00,
-              sgstAmount: 14.00,
-              totalAmount: 588.00,
-            }
-          ],
-          createdAt: new Date().toISOString(),
-        }
-      ]);
+      console.warn('Dashboard data fetch error:', err.message);
     }
   };
 
@@ -326,22 +147,22 @@ export function App() {
     const storedVpa = localStorage.getItem('ad_upi_vpa');
 
     setTenant({
-      id: storedTenantId || 'tenant-1',
-      storeName: storedName || 'Sharma Kirana Store',
-      subdomain: storedSubdomain || 'mystore',
-      ownerPhone: storedPhone || '9876543210',
-      ownerEmail: storedEmail || 'merchant@amazingdeal.co.in',
+      id: storedTenantId || '',
+      storeName: storedName || 'My Store',
+      subdomain: storedSubdomain || '',
+      ownerPhone: storedPhone || '',
+      ownerEmail: storedEmail || '',
       status: 'ACTIVE',
-      storeCategory: 'Groceries',
-      storeAddress: 'Shop 14, Main Bazaar, Civil Lines, Delhi - 110054',
-      gstin: '07AAAAA0000A1Z5',
+      storeCategory: '',
+      storeAddress: '',
+      gstin: '',
       stateCode: '07',
       invoicePrefix: 'INV',
-      bankName: 'HDFC Bank',
-      bankAccountNumber: '50200012345678',
-      bankIfsc: 'HDFC0001234',
-      bankBranch: 'Civil Lines, Delhi',
-      upiVpa: storedVpa || `${storedSubdomain || 'mystore'}@okaxis`,
+      bankName: '',
+      bankAccountNumber: '',
+      bankIfsc: '',
+      bankBranch: '',
+      upiVpa: storedVpa || (storedSubdomain ? `${storedSubdomain}@okaxis` : ''),
       deliveryRadiusKm: 5.0,
       deliveryCharge: 30.0,
       freeDeliveryAbove: 499.0,

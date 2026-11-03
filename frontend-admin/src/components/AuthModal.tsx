@@ -144,38 +144,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onOpenSuperadmi
             </div>
           </div>
 
-          {/* Quick Demo Access */}
-          <div className="mt-4 pt-3 text-center">
-            <button
-              onClick={() => {
-                const demoAuth: AuthResponse = {
-                  token: 'demo-token-123',
-                  tokenType: 'Bearer',
-                  tenantId: 'd3b07384-d113-40f4-8a1a-4d23253b2d1d',
-                  storeName: 'Sharma General Store',
-                  subdomain: 'sharma',
-                  storefrontUrl: 'https://sharma.amazingdeal.co.in',
-                  ownerEmail: 'sharma@amazingdeal.co.in',
-                  ownerPhone: '9876543210',
-                  upiVpa: 'sharma@okaxis',
-                };
-                ApiService.setAuth(demoAuth);
-                onSuccess(demoAuth);
-              }}
-              className="text-xs text-slate-500 hover:text-emerald-600 font-semibold inline-flex items-center space-x-1.5 py-1 px-2.5 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Explore Instant Demo Store Dashboard</span>
-            </button>
-          </div>
-
           {/* Superadmin Login Portal Access */}
           {onOpenSuperadmin && (
-            <div className="mt-2 pt-2 border-t border-slate-100 text-center">
+            <div className="mt-4 pt-3 border-t border-slate-100 text-center">
               <button
                 type="button"
                 onClick={onOpenSuperadmin}
-                className="text-xs text-indigo-600 hover:text-indigo-800 font-bold inline-flex items-center space-x-1.5 py-1 px-2.5 rounded-lg hover:bg-indigo-50 transition-colors"
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-bold inline-flex items-center space-x-1.5 py-1.5 px-3 rounded-lg hover:bg-indigo-50 transition-colors"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>Platform Superadmin Control Login ➔</span>

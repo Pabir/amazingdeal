@@ -13,12 +13,14 @@ import com.amazingdeal.modules.superadmin.model.Superadmin;
 import com.amazingdeal.modules.superadmin.repository.SuperadminRepository;
 import com.amazingdeal.modules.tenant.model.Tenant;
 import com.amazingdeal.modules.tenant.repository.TenantRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,7 @@ import java.lang.management.ManagementFactory;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -132,8 +135,8 @@ public class SuperadminService {
         String st = (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status)) ? status.trim().toUpperCase() : null;
         String pl = (plan != null && !plan.trim().isEmpty() && !"ALL".equalsIgnoreCase(plan)) ? plan.trim().toUpperCase() : null;
 
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Tenant> tenantPage = tenantRepository.searchTenants(s, st, pl, pageable);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Tenant> tenantPage = tenantRepository.findAll(buildTenantSpecification(s, st, pl), pageable);
 
         return tenantPage.map(this::mapTenantSummary);
     }
@@ -228,8 +231,8 @@ public class SuperadminService {
         String s = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
         String st = (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status)) ? status.trim().toUpperCase() : null;
 
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Customer> customerPage = customerRepository.searchCustomers(s, st, pageable);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Customer> customerPage = customerRepository.findAll(buildCustomerSpecification(s, st), pageable);
 
         return customerPage.map(c -> {
             long orderCount = orderRepository.countByCustomerId(c.getId());
@@ -296,7 +299,7 @@ public class SuperadminService {
         String st = (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status)) ? status.trim().toUpperCase() : null;
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Order> orderPage = orderRepository.searchGlobalOrders(s, st, pageable);
+        Page<Order> orderPage = orderRepository.findAll(buildOrderSpecification(s, st), pageable);
 
         Map<UUID, Tenant> tenantMap = tenantRepository.findAllById(
                 orderPage.getContent().stream().map(Order::getTenantId).collect(Collectors.toSet())
@@ -412,6 +415,68 @@ public class SuperadminService {
                 .deliveryType(o.getDeliveryType())
                 .createdAt(o.getCreatedAt())
                 .build();
+    }
+
+    // ==========================================
+    // Dynamic Query Specifications (Real Database Querying)
+    // ==========================================
+
+    private Specification<Tenant> buildTenantSpecification(String search, String status, String plan) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (search != null && !search.trim().isEmpty()) {
+                String pattern = "%" + search.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("storeName")), pattern),
+                        cb.like(cb.lower(root.get("subdomain")), pattern),
+                        cb.like(cb.lower(root.get("ownerEmail")), pattern),
+                        cb.like(cb.lower(root.get("ownerPhone")), pattern)
+                ));
+            }
+            if (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status)) {
+                predicates.add(cb.equal(cb.upper(root.get("status")), status.trim().toUpperCase()));
+            }
+            if (plan != null && !plan.trim().isEmpty() && !"ALL".equalsIgnoreCase(plan)) {
+                predicates.add(cb.equal(cb.upper(root.get("subscriptionPlan")), plan.trim().toUpperCase()));
+            }
+            return predicates.isEmpty() ? cb.conjunction() : cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    private Specification<Customer> buildCustomerSpecification(String search, String status) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (search != null && !search.trim().isEmpty()) {
+                String pattern = "%" + search.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("fullName")), pattern),
+                        cb.like(cb.lower(root.get("phone")), pattern),
+                        cb.like(cb.lower(root.get("email")), pattern)
+                ));
+            }
+            if (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status)) {
+                predicates.add(cb.equal(cb.upper(root.get("status")), status.trim().toUpperCase()));
+            }
+            return predicates.isEmpty() ? cb.conjunction() : cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    private Specification<Order> buildOrderSpecification(String search, String status) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (search != null && !search.trim().isEmpty()) {
+                String pattern = "%" + search.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("orderNumber")), pattern),
+                        cb.like(cb.lower(root.get("customerName")), pattern),
+                        cb.like(cb.lower(root.get("customerPhone")), pattern)
+                ));
+            }
+            if (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status)) {
+                predicates.add(cb.equal(cb.upper(root.get("orderStatus")), status.trim().toUpperCase()));
+            }
+            return predicates.isEmpty() ? cb.conjunction() : cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 }
 

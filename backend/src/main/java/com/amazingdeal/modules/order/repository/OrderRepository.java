@@ -4,6 +4,7 @@ import com.amazingdeal.modules.order.model.Order;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -13,7 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface OrderRepository extends JpaRepository<Order, UUID> {
+public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecificationExecutor<Order> {
     List<Order> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
     Page<Order> findByTenantIdOrderByCreatedAtDesc(UUID tenantId, Pageable pageable);
 
@@ -41,12 +42,4 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.customerId = :customerId AND o.orderStatus <> 'CANCELLED'")
     BigDecimal calculateCustomerTotalSpend(UUID customerId);
-
-    @Query("SELECT o FROM Order o WHERE " +
-           "(:search IS NULL OR LOWER(o.orderNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(o.customerName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(o.customerPhone) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-           "AND (:status IS NULL OR o.orderStatus = :status) " +
-           "ORDER BY o.createdAt DESC")
-    Page<Order> searchGlobalOrders(String search, String status, Pageable pageable);
 }
