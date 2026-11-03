@@ -281,3 +281,104 @@ export interface AiPhotoEnhanceResponse {
   suggestedCommands: string[];
   poweredBy?: string;
 }
+
+// ==========================================
+// Superadmin Types
+// ==========================================
+
+export interface SuperadminProfile {
+  id: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  role: string;
+  lastLoginAt?: string;
+}
+
+export interface PlatformStats {
+  totalMerchants: number;
+  activeMerchants: number;
+  suspendedMerchants: number;
+  totalCustomers: number;
+  totalOrders: number;
+  totalPlatformGmv: number;
+  totalSaaSRevenue: number;
+  recentMerchants: SuperadminMerchant[];
+  recentOrders: GlobalOrder[];
+}
+
+export interface SuperadminMerchant {
+  id: string;
+  storeName: string;
+  subdomain: string;
+  customDomain?: string;
+  ownerPhone: string;
+  ownerEmail: string;
+  status: 'ACTIVE' | 'SUSPENDED' | 'TRIAL';
+  storeCategory?: string;
+  storeAddress?: string;
+  gstin?: string;
+  stateCode?: string;
+  subscriptionPlan: string;
+  subscriptionExpiresAt?: string;
+  upiVpa?: string;
+  razorpayByokEnabled?: boolean;
+  createdAt: string;
+  productCount: number;
+  orderCount: number;
+  totalRevenue: number;
+}
+
+export interface SuperadminCustomer {
+  id: string;
+  firebaseUid: string;
+  fullName: string;
+  phone?: string;
+  email?: string;
+  avatarUrl?: string;
+  authProvider: string;
+  status: 'ACTIVE' | 'BLOCKED';
+  createdAt: string;
+  orderCount: number;
+  totalSpend: number;
+}
+
+export interface GlobalOrder {
+  id: string;
+  tenantId: string;
+  storeName: string;
+  subdomain: string;
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  totalAmount: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  orderStatus: string;
+  deliveryType: string;
+  createdAt: string;
+}
+
+export interface SubscriptionTx {
+  id: string;
+  orderId: string;
+  paymentId?: string;
+  amount: number;
+  currency: string;
+  planId: string;
+  subdomain: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface SystemHealth {
+  status: string;
+  database: string;
+  totalMemoryMb: number;
+  freeMemoryMb: number;
+  usedMemoryMb: number;
+  availableProcessors: number;
+  uptimeSeconds: number;
+  javaVersion: string;
+}
+

@@ -1,4 +1,10 @@
-import { AuthResponse, Order, OrderStats, Product, Tenant, ChatGptStatus, ChatGptAuthUrlResponse, GeneratedProduct, AiPhotoEnhanceRequest, AiPhotoEnhanceResponse, Party, Invoice } from '../types';
+import { 
+  AuthResponse, Order, OrderStats, Product, Tenant, ChatGptStatus, 
+  ChatGptAuthUrlResponse, GeneratedProduct, AiPhotoEnhanceRequest, 
+  AiPhotoEnhanceResponse, Party, Invoice, SuperadminProfile, 
+  PlatformStats, SuperadminMerchant, SuperadminCustomer, 
+  GlobalOrder, SubscriptionTx, SystemHealth 
+} from '../types';
 
 const getApiBase = (): string => {
   if (typeof window !== 'undefined') {
@@ -26,7 +32,7 @@ export class ApiService {
     return localStorage.getItem('ad_auth_token');
   }
 
-  private static getTenantId(): string | null {
+  public static getTenantId(): string | null {
     return localStorage.getItem('ad_tenant_id');
   }
 
@@ -508,5 +514,231 @@ export class ApiService {
     } catch (e: any) {
       return { success: false, message: e.message || 'IFSC code not found' };
     }
+  }
+
+  // ==========================================
+  // Superadmin API & Session Management
+  // ==========================================
+
+  public static getSuperadminToken(): string | null {
+    return localStorage.getItem('sa_auth_token');
+  }
+
+  public static getSuperadminProfile(): SuperadminProfile | null {
+    const raw = localStorage.getItem('sa_profile');
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  public static isSuperadminAuthenticated(): boolean {
+    const token = this.getSuperadminToken();
+    if (!token) return false;
+    if (this.isTokenExpired(token)) {
+      this.superadminLogout();
+      return false;
+    }
+    return true;
+  }
+
+  public static isImpersonating(): boolean {
+    return !!localStorage.getItem('sa_impersonating_backup');
+  }
+
+  public static getImpersonatedStoreName(): string {
+    return localStorage.getItem('sa_impersonating_store') || 'Merchant Store';
+  }
+
+  public static superadminLogout() {
+    localStorage.removeItem('sa_auth_token');
+    localStorage.removeItem('sa_profile');
+    localStorage.removeItem('sa_impersonating_backup');
+    localStorage.removeItem('sa_impersonating_store');
+  }
+
+  private static async superadminRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const token = this.getSuperadminToken();
+    if (!token) {
+      throw new Error('Superadmin authentication required');
+    }
+
+    if (this.isTokenExpired(token)) {
+      this.superadminLogout();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sa_session_expired'));
+      }
+      throw new Error('Superadmin session expired. Please sign in again.');
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...(options.headers as Record<string, string>),
+    };
+
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      let errMessage = `HTTP Error ${response.status}`;
+      try {
+        const errJson = await response.json();
+        if (errJson.message) errMessage = errJson.message;
+      } catch {}
+      throw new Error(errMessage);
+    }
+
+    return response.json();
+  }
+
+  public static async superadminLogin(email: string, password: string): Promise<SuperadminProfile> {
+    const response = await fetch(`${API_BASE}/api/v1/superadmin/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      let errMessage = 'Invalid Superadmin credentials';
+      try {
+        const errJson = await response.json();
+        if (errJson.message) errMessage = errJson.message;
+      } catch {}
+      throw new Error(errMessage);
+    }
+
+    const data = await response.json();
+    localStorage.setItem('sa_auth_token', data.token);
+    const profile: SuperadminProfile = {
+      id: data.id,
+      email: data.email,
+      fullName: data.fullName,
+      phone: data.phone,
+      role: data.role,
+      lastLoginAt: data.lastLoginAt,
+    };
+    localStorage.setItem('sa_profile', JSON.stringify(profile));
+    return profile;
+  }
+
+  public static async getPlatformStats(): Promise<PlatformStats> {
+    return this.superadminRequest<PlatformStats>('/api/v1/superadmin/stats');
+  }
+
+  public static async getSuperadminMerchants(
+    search?: string,
+    status?: string,
+    plan?: string,
+    page: number = 0,
+    size: number = 20
+  ): Promise<{ content: SuperadminMerchant[]; totalElements: number; totalPages: number }> {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (status && status !== 'ALL') params.set('status', status);
+    if (plan && plan !== 'ALL') params.set('plan', plan);
+    params.set('page', page.toString());
+    params.set('size', size.toString());
+
+    return this.superadminRequest(`/api/v1/superadmin/merchants?${params.toString()}`);
+  }
+
+  public static async getSuperadminMerchantDetails(id: string): Promise<SuperadminMerchant> {
+    return this.superadminRequest<SuperadminMerchant>(`/api/v1/superadmin/merchants/${id}`);
+  }
+
+  public static async updateMerchantStatus(id: string, status: string): Promise<SuperadminMerchant> {
+    return this.superadminRequest<SuperadminMerchant>(`/api/v1/superadmin/merchants/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  public static async updateMerchantPlan(id: string, subscriptionPlan: string, extendDays?: number): Promise<SuperadminMerchant> {
+    return this.superadminRequest<SuperadminMerchant>(`/api/v1/superadmin/merchants/${id}/plan`, {
+      method: 'PATCH',
+      body: JSON.stringify({ subscriptionPlan, extendDays }),
+    });
+  }
+
+  public static async impersonateMerchant(id: string): Promise<{ token: string; storeName: string; subdomain: string }> {
+    const data = await this.superadminRequest<any>(`/api/v1/superadmin/merchants/${id}/impersonate`, {
+      method: 'POST',
+    });
+
+    // Backup superadmin token and flag
+    const saToken = this.getSuperadminToken();
+    if (saToken) {
+      localStorage.setItem('sa_impersonating_backup', saToken);
+      localStorage.setItem('sa_impersonating_store', data.storeName || 'Store');
+    }
+
+    // Set active merchant token
+    localStorage.setItem('ad_auth_token', data.token);
+    localStorage.setItem('ad_tenant_id', data.tenantId);
+    localStorage.setItem('ad_subdomain', data.subdomain);
+    localStorage.setItem('ad_store_name', data.storeName);
+    localStorage.setItem('ad_owner_email', data.ownerEmail || '');
+
+    return data;
+  }
+
+  public static exitImpersonation() {
+    const saBackup = localStorage.getItem('sa_impersonating_backup');
+    if (saBackup) {
+      localStorage.setItem('sa_auth_token', saBackup);
+    }
+    localStorage.removeItem('sa_impersonating_backup');
+    localStorage.removeItem('sa_impersonating_store');
+    this.clearAuth();
+  }
+
+  public static async getSuperadminCustomers(
+    search?: string,
+    status?: string,
+    page: number = 0,
+    size: number = 20
+  ): Promise<{ content: SuperadminCustomer[]; totalElements: number; totalPages: number }> {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (status && status !== 'ALL') params.set('status', status);
+    params.set('page', page.toString());
+    params.set('size', size.toString());
+
+    return this.superadminRequest(`/api/v1/superadmin/customers?${params.toString()}`);
+  }
+
+  public static async updateCustomerStatus(id: string, status: string): Promise<SuperadminCustomer> {
+    return this.superadminRequest<SuperadminCustomer>(`/api/v1/superadmin/customers/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  public static async getGlobalOrders(
+    search?: string,
+    status?: string,
+    page: number = 0,
+    size: number = 20
+  ): Promise<{ content: GlobalOrder[]; totalElements: number; totalPages: number }> {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (status && status !== 'ALL') params.set('status', status);
+    params.set('page', page.toString());
+    params.set('size', size.toString());
+
+    return this.superadminRequest(`/api/v1/superadmin/orders?${params.toString()}`);
+  }
+
+  public static async getSubscriptions(): Promise<SubscriptionTx[]> {
+    return this.superadminRequest<SubscriptionTx[]>('/api/v1/superadmin/subscriptions');
+  }
+
+  public static async getSystemHealth(): Promise<SystemHealth> {
+    return this.superadminRequest<SystemHealth>('/api/v1/superadmin/system/health');
   }
 }

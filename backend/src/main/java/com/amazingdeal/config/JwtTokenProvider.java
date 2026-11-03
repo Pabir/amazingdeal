@@ -59,6 +59,22 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    public String generateSuperadminToken(UUID superadminId, String email, String fullName) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + expirationMs);
+
+        return Jwts.builder()
+                .subject(email)
+                .claim("superadminId", superadminId.toString())
+                .claim("fullName", fullName != null ? fullName : "Superadmin")
+                .claim("email", email)
+                .claim("role", "ROLE_SUPERADMIN")
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(key)
+                .compact();
+    }
+
     public boolean validateToken(String token) {
         try {
             Jwts.parser().verifyWith(key).build().parseSignedClaims(token);

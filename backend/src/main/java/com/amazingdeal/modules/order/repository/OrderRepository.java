@@ -31,4 +31,22 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.tenantId = :tenantId AND o.orderStatus <> 'CANCELLED'")
     BigDecimal calculateTotalRevenue(UUID tenantId);
+
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.orderStatus <> 'CANCELLED'")
+    BigDecimal calculatePlatformTotalGmv();
+
+    List<Order> findTop5ByOrderByCreatedAtDesc();
+
+    long countByCustomerId(UUID customerId);
+
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.customerId = :customerId AND o.orderStatus <> 'CANCELLED'")
+    BigDecimal calculateCustomerTotalSpend(UUID customerId);
+
+    @Query("SELECT o FROM Order o WHERE " +
+           "(:search IS NULL OR LOWER(o.orderNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "OR LOWER(o.customerName) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "OR LOWER(o.customerPhone) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "AND (:status IS NULL OR o.orderStatus = :status) " +
+           "ORDER BY o.createdAt DESC")
+    Page<Order> searchGlobalOrders(String search, String status, Pageable pageable);
 }

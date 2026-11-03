@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Store, ArrowRight, Sparkles, ExternalLink, Lock, Mail } from 'lucide-react';
+import { Store, ArrowRight, Sparkles, ExternalLink, Lock, Mail, ShieldCheck } from 'lucide-react';
 import { ApiService } from '../services/api';
 import { AuthResponse } from '../types';
 
 interface AuthModalProps {
   onSuccess: (auth: AuthResponse) => void;
+  onOpenSuperadmin?: () => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onOpenSuperadmin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -167,6 +168,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess }) => {
               <span>Explore Instant Demo Store Dashboard</span>
             </button>
           </div>
+
+          {/* Superadmin Login Portal Access */}
+          {onOpenSuperadmin && (
+            <div className="mt-2 pt-2 border-t border-slate-100 text-center">
+              <button
+                type="button"
+                onClick={onOpenSuperadmin}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-bold inline-flex items-center space-x-1.5 py-1 px-2.5 rounded-lg hover:bg-indigo-50 transition-colors"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Platform Superadmin Control Login ➔</span>
+              </button>
+            </div>
+          )}
 
         </div>
       </div>

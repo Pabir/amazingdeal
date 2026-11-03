@@ -9,8 +9,11 @@ import { ProductCatalog } from './components/ProductCatalog';
 import { StoreSettings } from './components/StoreSettings';
 import { ThermalReceiptModal } from './components/ThermalReceiptModal';
 import { AuthModal } from './components/AuthModal';
+import { SuperadminDashboard } from './components/superadmin/SuperadminDashboard';
+import { SuperadminLoginModal } from './components/superadmin/SuperadminLoginModal';
 import { ApiService } from './services/api';
-import { Order, OrderStats, Product, Tenant, AuthResponse, Party, Invoice } from './types';
+import { Order, OrderStats, Product, Tenant, AuthResponse, Party, Invoice, SuperadminProfile } from './types';
+import { ShieldCheck } from 'lucide-react';
 
 // Audio chime using Web Audio API (zero external assets needed)
 function playOrderChime() {
@@ -54,7 +57,22 @@ export function App() {
   const [receiptText, setReceiptText] = useState<string>('');
   const [selectedA4Invoice, setSelectedA4Invoice] = useState<Invoice | null>(null);
 
+  // Superadmin & Impersonation State
+  const [isSuperadminAuth, setIsSuperadminAuth] = useState<boolean>(ApiService.isSuperadminAuthenticated());
+  const [showSuperadminLogin, setShowSuperadminLogin] = useState<boolean>(false);
+  const [isImpersonating, setIsImpersonating] = useState<boolean>(ApiService.isImpersonating());
+  const [impersonatedStore, setImpersonatedStore] = useState<string>(ApiService.getImpersonatedStoreName());
+
   const prevOrderCountRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isSuperadminPath = window.location.pathname.startsWith('/superadmin') || window.location.search.includes('superadmin=true');
+      if (isSuperadminPath && !isSuperadminAuth) {
+        setShowSuperadminLogin(true);
+      }
+    }
+  }, [isSuperadminAuth]);
 
   const loadData = async () => {
     if (!isAuthenticated) return;
@@ -471,32 +489,83 @@ ${invoice.balanceDue > 0 ? `Balance Due:         ₹${invoice.balanceDue.toFixed
   };
 
   const handleLogout = () => {
+    if (isImpersonating) {
+      ApiService.exitImpersonation();
+      setIsImpersonating(false);
+      setIsAuthenticated(false);
+      setIsSuperadminAuth(true);
+      return;
+    }
     ApiService.clearAuth();
     setIsAuthenticated(false);
   };
 
-  if (!isAuthenticated) {
+  // 1. If Superadmin authenticated and NOT currently impersonating a merchant store, render Superadmin Panel
+  if (isSuperadminAuth && !isImpersonating) {
     return (
-      <AuthModal
-        onSuccess={(auth: AuthResponse) => {
+      <SuperadminDashboard
+        onLogout={() => {
+          ApiService.superadminLogout();
+          setIsSuperadminAuth(false);
+        }}
+        onImpersonateSuccess={(storeName, subdomain) => {
+          setIsImpersonating(true);
+          setImpersonatedStore(storeName);
+          setIsAuthenticated(true);
           setTenant({
-            id: auth.tenantId,
-            storeName: auth.storeName,
-            subdomain: auth.subdomain,
-            ownerPhone: auth.ownerPhone,
-            ownerEmail: auth.ownerEmail,
+            id: ApiService.getTenantId() || '',
+            storeName: storeName,
+            subdomain: subdomain,
+            ownerPhone: '',
+            ownerEmail: '',
             status: 'ACTIVE',
-            storeCategory: 'Groceries',
-            upiVpa: auth.upiVpa,
+            storeCategory: 'General Store',
             deliveryRadiusKm: 5.0,
             deliveryCharge: 30.0,
             freeDeliveryAbove: 499.0,
             minOrderAmount: 0.0,
             storeTimings: '8:00 AM - 10:00 PM',
           });
-          setIsAuthenticated(true);
+          loadData();
         }}
       />
+    );
+  }
+
+  // 2. If Merchant is not signed in (and not Superadmin), show Auth screen
+  if (!isAuthenticated) {
+    return (
+      <>
+        <AuthModal
+          onSuccess={(auth: AuthResponse) => {
+            setTenant({
+              id: auth.tenantId,
+              storeName: auth.storeName,
+              subdomain: auth.subdomain,
+              ownerPhone: auth.ownerPhone,
+              ownerEmail: auth.ownerEmail,
+              status: 'ACTIVE',
+              storeCategory: 'Groceries',
+              upiVpa: auth.upiVpa,
+              deliveryRadiusKm: 5.0,
+              deliveryCharge: 30.0,
+              freeDeliveryAbove: 499.0,
+              minOrderAmount: 0.0,
+              storeTimings: '8:00 AM - 10:00 PM',
+            });
+            setIsAuthenticated(true);
+          }}
+          onOpenSuperadmin={() => setShowSuperadminLogin(true)}
+        />
+        <SuperadminLoginModal
+          isOpen={showSuperadminLogin}
+          onClose={() => setShowSuperadminLogin(false)}
+          onSuccess={(_profile) => {
+            setIsSuperadminAuth(true);
+            setShowSuperadminLogin(false);
+          }}
+        />
+      </>
     );
   }
 
@@ -504,6 +573,30 @@ ${invoice.balanceDue > 0 ? `Balance Due:         ₹${invoice.balanceDue.toFixed
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
+      
+      {/* Impersonation Floating Sticky Alert */}
+      {isImpersonating && (
+        <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white px-4 py-2.5 text-xs font-bold shadow-lg flex flex-wrap items-center justify-between gap-2 z-50 sticky top-0">
+          <div className="flex items-center space-x-2">
+            <ShieldCheck className="w-4 h-4 text-amber-200" />
+            <span>
+              SUPERADMIN IMPERSONATION: Managing store <strong>"{tenant?.storeName || impersonatedStore}"</strong>. You have unrestricted merchant access.
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              ApiService.exitImpersonation();
+              setIsImpersonating(false);
+              setIsAuthenticated(false);
+              setIsSuperadminAuth(true);
+            }}
+            className="px-3.5 py-1 bg-white text-orange-950 rounded-lg hover:bg-orange-50 font-black shadow-sm transition-colors text-xs"
+          >
+            Exit Impersonation & Return to Superadmin Dashboard ➔
+          </button>
+        </div>
+      )}
+
       <Navbar
         tenant={tenant}
         activeTab={activeTab}
