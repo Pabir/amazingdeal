@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AmazingDeal - Master System Architecture & Code Study Guide</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 18mm 16mm;
+    @bottom-right {
+      content: counter(page);
+    }
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.6;
+    background: #ffffff;
+    padding: 24px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .no-print-bar {
+    background: #0f172a;
+    color: #ffffff;
+    padding: 14px 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .print-btn {
+    background: #4f46e5;
+    color: #ffffff;
+    border: none;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .print-btn:hover { background: #4338ca; }
+  h1, h2, h3, h4 { color: #0f172a; page-break-after: avoid; font-weight: 800; }
+  h1 { border-bottom: 2px solid #4f46e5; padding-bottom: 8px; margin-top: 36px; font-size: 24px; }
+  h2 { border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 28px; color: #3730a3; font-size: 18px; }
+  h3 { margin-top: 20px; font-size: 15px; color: #1e1b4b; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 12px; page-break-inside: avoid; }
+  th, td { border: 1px solid #cbd5e1; padding: 7px 10px; text-align: left; }
+  th { background-color: #f1f5f9; font-weight: bold; color: #1e293b; }
+  tr:nth-child(even) { background-color: #f8fafc; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-size: 11px; color: #0f172a; }
+  pre { background: #0f172a; color: #f8fafc; padding: 14px; border-radius: 8px; overflow-x: auto; font-size: 11px; line-height: 1.45; page-break-inside: avoid; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+  .callout { border-left: 4px solid #4f46e5; background: #eef2ff; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; font-size: 13px; page-break-inside: avoid; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background: #e0e7ff; color: #3730a3; }
+  .page-break { page-break-before: always; }
+  @media print {
+    .no-print-bar { display: none; }
+    body { padding: 0; max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print-bar">
+  <div>
+    <strong style="font-size:16px;">AmazingDeal Master Architecture Manual</strong>
+    <div style="font-size:12px; color:#94a3b8; margin-top:2px;">Production Enterprise Reference Guide • PDF Ready</div>
+  </div>
+  <button class="print-btn" onclick="window.print()">📥 Print / Save as PDF</button>
+</div>
+
+<div style="text-align: center; margin-bottom: 40px; padding: 30px 20px; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: #ffffff; border-radius: 16px;">
+  <span class="badge" style="background: rgba(99,102,241,0.25); color: #c7d2fe; border: 1px solid rgba(165,180,252,0.3); margin-bottom: 12px;">SYSTEM ARCHITECTURE &amp; CODE MANUAL</span>
+  <h1 style="color: #ffffff; border: none; font-size: 28px; margin: 10px 0 6px 0; padding: 0;">AmazingDeal (amazingdeal.co.in)</h1>
+  <p style="color: #94a3b8; font-size: 14px; margin: 0 auto; max-width: 600px;">
+    The Cloud-Native Multi-Tenant Hyperlocal E-Commerce Platform for Indian Retailers. Complete Engineering Walkthrough from Design to Code.
+  </p>
+  <div style="margin-top: 18px; font-size: 12px; color: #cbd5e1;">
+    Spring Boot 3.3.5 • Java 21 LTS • Neon PostgreSQL • React 18 • Cloudflare Pages/Workers/R2
+  </div>
+</div>
+
+<h2>Table of Contents</h2>
+<ol style="font-size: 13px; line-height: 1.8;">
+  <li><strong>Executive Summary &amp; High-Level System Architecture</strong> (Topology, Tech Stack, Cloud Free-Tier)</li>
+  <li><strong>Multi-Tenancy Engine &amp; Request Lifecycle</strong> (Discriminator Column, ThreadLocal Contexts, Hibernate Filters)</li>
+  <li><strong>Database Architecture &amp; Entity-Relationship Schema</strong> (9 Master Tables, Field Mappings, Indexing)</li>
+  <li><strong>Authentication, Security &amp; RBAC Engine</strong> (Multi-Role JWTs, Firebase Auth, Mandatory Checkout Guard)</li>
+  <li><strong>AI Product Studio &amp; Vision Pipeline</strong> (Gemini 3.8 Flash, OpenAI 4o-mini, 360° Turnaround Turntable)</li>
+  <li><strong>Indian Payment Stack &amp; Hardware POS Printing</strong> (0% Fee Direct UPI QR, Razorpay BYOK, ESC/POS, GST Invoicing)</li>
+  <li><strong>Logistics Engine &amp; Delivery Fleet</strong> (Shiprocket Domestic BYOK, Store Fleet Dispatch, Time Slots)</li>
+  <li><strong>Superadmin Master Operations Suite</strong> (JPA Specifications, Merchant Controls, Impersonation Engine)</li>
+  <li><strong>Complete File-by-File Catalog &amp; Code Walkthrough</strong> (All 99 Backend + 51 Frontend Files Detailed)</li>
+  <li><strong>Cloud DevOps &amp; Zero-Cost Infrastructure Playbook</strong> (Render, Neon, Cloudflare, OCI ARM VM)</li>
+</ol>
+
+<hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+<h1>1. Executive Summary &amp; High-Level System Architecture</h1>
+<p>
+  <strong>AmazingDeal</strong> is engineered to give every Indian kirana store, boutique, restaurant, pharmacy, and diagnostic lab their own independent e-commerce presence without monthly subscription traps or 15-30% commissions.
+</p>
+
+<h3>High-Level System Topology</h3>
+<pre>
+[ CUSTOMERS &amp; MERCHANTS ]
+           │
+           ▼
+┌────────────────────────────────────────────────────────┐
+│ Cloudflare Edge Network (*.amazingdeal.co.in)          │
+│ • Universal Wildcard SSL &amp; DDoS Protection             │
+│ • Cloudflare Pages: frontend-admin &amp; frontend-storefront│
+│ • Cloudflare R2: media.amazingdeal.co.in Object Storage│
+└──────────────────────────┬─────────────────────────────┘
+                           │ REST APIs (/api/v1/**)
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ Backend Web Service (Render Docker / Java 21 LTS)      │
+│ • Multi-Tenancy Engine: TenantResolver &amp; TenantFilter  │
+│ • AI Vision Processor (Gemini 3.8 Flash / OpenAI 4o)   │
+│ • Vyapar POS Counter Billing &amp; GST Tax Engine          │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ Neon Serverless PostgreSQL 16 (AWS us-east-2)          │
+│ • Discriminator Column Pattern (tenant_id UUID)        │
+│ • Hibernate Session Filter Level Isolation             │
+└────────────────────────────────────────────────────────┘
+</pre>
+
+<h3>Core Technology Inventory</h3>
+<table>
+  <tr><th>Tier</th><th>Technology</th><th>Version</th><th>Key Architectural Responsibility</th></tr>
+  <tr><td>Backend Core</td><td>Spring Boot</td><td>3.3.5</td><td>REST API engine, dependency injection, and JPA repository management</td></tr>
+  <tr><td>Runtime</td><td>Java (Eclipse Temurin)</td><td>21 LTS</td><td>Virtual threads, G1 Garbage Collector, container CGroup memory ergonomics</td></tr>
+  <tr><td>Database</td><td>Neon PostgreSQL</td><td>16</td><td>Serverless PostgreSQL with SSL connection pooling and branchable storage</td></tr>
+  <tr><td>Multi-Tenancy</td><td>Hibernate Filters</td><td>6.x</td><td>Automatic row-level discriminator isolation (<code>tenant_id = :tenantId</code>)</td></tr>
+  <tr><td>AI Vision</td><td>Google Gemini &amp; OpenAI</td><td>3.8 Flash / 4o</td><td>Camera-to-listing attribute extraction and 360° photoshoot generation</td></tr>
+  <tr><td>Admin Frontend</td><td>React + TypeScript</td><td>18.3.1</td><td>Merchant dashboard, POS counter billing, GST reporting, and Superadmin suite</td></tr>
+  <tr><td>Storefront</td><td>React + Firebase</td><td>18.3.1 / 13.0</td><td>Customer storefront, Google 1-Tap authentication, cart, and 1-step checkout</td></tr>
+  <tr><td>Media Delivery</td><td>Cloudflare R2</td><td>S3 API</td><td>Product catalog photos and QR sticker storage with 0 egress bandwidth fees</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h1>2. Multi-Tenancy Engine &amp; Request Lifecycle</h1>
+<p>
+  AmazingDeal uses the <strong>Discriminator Column Pattern</strong> with automated Hibernate session filtering. Every multi-tenant entity stores a <code>tenant_id UUID</code> column.
+</p>
+
+<h3>How Request Isolation Works (Step-by-Step):</h3>
+<ol>
+  <li><strong>Subdomain Extraction (<code>TenantResolver.java</code>):</strong> Inspects the HTTP <code>Host</code> header. E.g., for <code>sharma.amazingdeal.co.in</code>, it extracts <code>sharma</code>. Fallbacks check <code>?store=sharma</code> or header <code>X-Tenant-ID</code>.</li>
+  <li><strong>Tenant Validation &amp; Context Binding (<code>TenantFilter.java</code>):</strong> Resolves the tenant from database. If active, binds the UUID to ThreadLocal <code>TenantContext.setTenantId(tenant.getId())</code>.</li>
+  <li><strong>Hibernate Session Injection:</strong> The filter enables Hibernate's session filter:
+  <pre>session.enableFilter("tenantFilter").setParameter("tenantId", tenantId);</pre>
+  Every JPA query subsequently executed by repositories automatically appends <code>WHERE tenant_id = 'xxxx'</code>. It is mathematically impossible to leak data across stores.</li>
+  <li><strong>Audit Assignment (<code>TenantAwareEntity.java</code>):</strong> When creating records, <code>@PrePersist</code> automatically reads <code>TenantContext.getTenantId()</code> and injects it before the SQL INSERT statement runs.</li>
+  <li><strong>Thread Cleanup:</strong> A <code>finally</code> block executes <code>TenantContext.clear()</code> to prevent ThreadLocal memory leakage across thread pool executions.</li>
+</ol>
+
+<hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+<h1>3. Database Architecture &amp; Entity Schema</h1>
+<p>
+  The database schema consists of 9 core tables structured for hyperlocal multi-tenancy and high performance:
+</p>
+
+<table>
+  <tr><th>Table Name</th><th>Key Columns</th><th>Isolation</th><th>Purpose</th></tr>
+  <tr><td><code>tenants</code></td><td>id, store_name, subdomain, gstin, state_code, upi_vpa, subscription_plan</td><td>Global Table</td><td>Master store registrations, credentials, and business settings</td></tr>
+  <tr><td><code>products</code></td><td>id, tenant_id, title, price, compare_price, category, inventory, hsn_sac, gst_rate, images_json</td><td>Tenant-Scoped</td><td>Merchant product catalog, inventory tracking, and tax classifications</td></tr>
+  <tr><td><code>orders</code></td><td>id, tenant_id, customer_id, order_number, total_amount, payment_method, order_status, items_json</td><td>Tenant-Scoped</td><td>Customer orders and in-store POS counter bills</td></tr>
+  <tr><td><code>customers</code></td><td>id, firebase_uid, full_name, phone, email, status</td><td>Global Registry</td><td>Registered Indian buyers across all stores</td></tr>
+  <tr><td><code>customer_addresses</code></td><td>id, customer_id, address_type, street_address, pincode, landmark, is_default</td><td>Customer-Scoped</td><td>Saved multi-address book for frictionless checkout</td></tr>
+  <tr><td><code>parties</code></td><td>id, tenant_id, party_name, party_type, gstin, phone, current_balance, credit_limit</td><td>Tenant-Scoped</td><td>Vyapar-grade customer and supplier Udhaar Khata ledgers</td></tr>
+  <tr><td><code>invoices</code></td><td>id, tenant_id, party_id, invoice_number, document_type, taxable_amount, cgst, sgst, igst, total</td><td>Tenant-Scoped</td><td>Official GST tax invoices and estimates with state tax splitting</td></tr>
+  <tr><td><code>superadmins</code></td><td>id, email, password_hash, full_name, role, status, last_login_at</td><td>System Admin</td><td>Platform master administrators with global oversight</td></tr>
+  <tr><td><code>razorpay_transactions</code></td><td>id, order_id, payment_id, amount, plan_id, subdomain, status</td><td>Audit Ledger</td><td>Audit trail of platform SaaS subscription payments</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h1>4. Authentication, Security &amp; RBAC Engine</h1>
+<p>
+  AmazingDeal enforces defense-in-depth across three separate user roles using stateless JJWT:
+</p>
+<ul>
+  <li><code>ROLE_MERCHANT</code>: Store owners administering products, orders, POS billing, and GST reports.</li>
+  <li><code>ROLE_CUSTOMER</code>: Shoppers logging in via Firebase Authentication (Google 1-Tap or Mobile SMS OTP). Mandatory at checkout to prevent guest order fraud.</li>
+  <li><code>ROLE_SUPERADMIN</code>: Master platform operators overseeing stores, platform revenue, and server health.</li>
+</ul>
+
+<div class="callout">
+  <strong>Mandatory Customer Checkout Guard:</strong> Both frontend (<code>CartDrawer.tsx</code>, <code>CheckoutModal.tsx</code>) and backend (<code>StorefrontController.placeOrder</code>) strictly validate customer identity. Unauthenticated requests are rejected with <code>HTTP 401 Unauthorized</code>.
+</div>
+
+<hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+<h1>5. AI Product Studio &amp; Vision Pipeline</h1>
+<p>
+  Merchants can snap a single packaging photo. <code>AiCatalogGeneratorService.java</code> calls Google Gemini 3.8 Flash (with automatic OpenAI GPT-4o-mini fallback) to extract:
+</p>
+<ul>
+  <li>Clean Title, Brand Name, and Subcategory</li>
+  <li>Recommended Selling Price and Compare MRP</li>
+  <li>Detected Barcode / EAN number</li>
+  <li>HSN / SAC Code and matching Indian GST tax slab (0%, 5%, 12%, 18%, 28%)</li>
+  <li><strong>360° Studio Enhancer:</strong> Generates 4 synthetic angles (0° Front Hero, 45° Perspective, 90° Side Profile, Macro Detail) displayed in an interactive touch/mouse turntable scrubber.</li>
+</ul>
+
+<hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+<h1>6. Indian Payment Stack &amp; Hardware Printing</h1>
+<ol>
+  <li><strong>Direct UPI Dynamic QR (0% MDR):</strong> Formats NPCI standard deep link:
+  <code>upi://pay?pa=store@okaxis&amp;pn=StoreName&amp;am=150.00&amp;tn=ORD-1001&amp;cu=INR</code>
+  Generates instant QR code via Google ZXing library. Customers tap to open GPay, PhonePe, or Paytm.</li>
+  <li><strong>Razorpay BYOK:</strong> Merchants can plug in their own Razorpay Key ID and Secret. Backends enforce strict cryptographic HMAC-SHA256 signature verification with zero mock bypasses.</li>
+  <li><strong>Vyapar POS Counter Billing (<code>PosCounter.tsx</code>):</strong> High-speed billing with barcode scanner support, hotkeys (<code>F2</code> New Bill, <code>F4</code> Quick Cash, <code>F8</code> Clear), and automated Cash Change Calculator (₹100, ₹200, ₹500 rupee presets).</li>
+  <li><strong>Thermal Printing:</strong> Native 58mm and 80mm ESC/POS monospace receipt formatting.</li>
+  <li><strong>Isolated Print Engine (<code>printInvoices.ts</code>):</strong> Renders A4 GST Tax Invoices in a dedicated hidden iframe, completely eliminating browser modal clipping and ensuring zero blank sheets on printers like Epson L3310.</li>
+  <li><strong>GSTR-1 Excel Engine (<code>gstExport.ts</code>):</strong> Generates 4-sheet Microsoft Excel XML Workbooks (.xls) for Master Sales Register, Table 4 (B2B), Table 7 (B2C), and Table 12 (HSN Summary).</li>
+</ol>
+
+<div class="page-break"></div>
+
+<h1>7. Logistics Engine &amp; Delivery Fleet</h1>
+<ul>
+  <li><strong>Shiprocket Domestic Courier (BYOK):</strong> Automated AWB generation, shipping labels, and live serviceability check across 29,000+ Indian pincodes.</li>
+  <li><strong>Store Rider Dispatch:</strong> Hyperlocal radius calculation, whitelisted pincodes, delivery time slot selection ("Today Evening", "Rush Express 60-mins"), and 1-tap WhatsApp dispatch link with customer address, Google Maps GPS coordinates, and cash-to-collect instructions.</li>
+</ul>
+
+<hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+<h1>8. Superadmin Master Operations Suite</h1>
+<p>
+  Accessed at <code>/superadmin</code> and housed inside <code>frontend-admin</code>:
+</p>
+<ul>
+  <li><strong>JPA Dynamic Specifications:</strong> Uses <code>JpaSpecificationExecutor&lt;T&gt;</code> and Criteria API predicates, completely eliminating untyped null parameter JDBC crashes in PostgreSQL.</li>
+  <li><strong>Platform KPIs:</strong> Live metrics for Active/Suspended Merchants, Customers, Orders, Platform GMV, and SaaS Revenue.</li>
+  <li><strong>1-Click Store Impersonation:</strong> Generates scoped merchant JWTs allowing superadmins to inspect any store's dashboard with a sticky top return banner.</li>
+  <li><strong>JVM Memory Meter:</strong> Real-time telemetry of committed heap, active memory, and container headroom.</li>
+</ul>
+
+<hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+<h1>9. Complete File-by-File Code Walkthrough</h1>
+
+<h3>Backend Core &amp; Multi-Tenancy</h3>
+<table>
+  <tr><th>File Path</th><th>Key Class</th><th>Detailed Purpose</th></tr>
+  <tr><td><code>multitenancy/TenantResolver.java</code></td><td>TenantResolver</td><td>Parses HTTP Host header for subdomain, query param <code>?store=</code>, or <code>X-Tenant-ID</code>.</td></tr>
+  <tr><td><code>multitenancy/TenantFilter.java</code></td><td>TenantFilter</td><td>Spring filter validating tenant and binding Hibernate session filter parameter.</td></tr>
+  <tr><td><code>multitenancy/TenantContext.java</code></td><td>TenantContext</td><td>ThreadLocal holder for current request's tenant UUID and subdomain.</td></tr>
+  <tr><td><code>multitenancy/CustomerContext.java</code></td><td>CustomerContext</td><td>ThreadLocal holder for authenticated customer UUID.</td></tr>
+  <tr><td><code>multitenancy/TenantAwareEntity.java</code></td><td>TenantAwareEntity</td><td>Base entity class with <code>@PrePersist</code> automatic tenant assignment.</td></tr>
+  <tr><td><code>config/SecurityConfig.java</code></td><td>SecurityConfig</td><td>Configures stateless Spring Security 6 filter chain and endpoint RBAC.</td></tr>
+  <tr><td><code>config/JwtFilter.java</code></td><td>JwtFilter</td><td>Validates incoming Bearer JWT tokens and sets Spring SecurityContext.</td></tr>
+  <tr><td><code>config/JwtTokenProvider.java</code></td><td>JwtTokenProvider</td><td>Generates HMAC-SHA256 tokens for Merchants, Customers, and Superadmins.</td></tr>
+</table>
+
+<h3>Backend Feature Modules</h3>
+<table>
+  <tr><th>Module</th><th>Key Files</th><th>Detailed Purpose</th></tr>
+  <tr><td><strong>AI Vision</strong></td><td><code>AiCatalogController.java</code>, <code>AiCatalogGeneratorService.java</code></td><td>Camera-to-listing extraction and 360° photo synthesizer using Gemini and OpenAI.</td></tr>
+  <tr><td><strong>Billing &amp; Tax</strong></td><td><code>BillingController.java</code>, <code>BillingService.java</code>, <code>Invoice.java</code></td><td>GST tax invoicing, state tax split logic, HSN summary, and GSTR-1 CSV export.</td></tr>
+  <tr><td><strong>Customers</strong></td><td><code>CustomerAuthController.java</code>, <code>CustomerService.java</code></td><td>Firebase authentication token exchange and customer address book management.</td></tr>
+  <tr><td><strong>Orders &amp; POS</strong></td><td><code>StorefrontController.java</code>, <code>AdminOrderController.java</code>, <code>OrderService.java</code></td><td>Order placement with login guard, inventory decrement, and ESC/POS thermal formatting.</td></tr>
+  <tr><td><strong>Parties &amp; Khata</strong></td><td><code>PartyController.java</code>, <code>PartyService.java</code>, <code>Party.java</code></td><td>Customer/Supplier Udhaar Khata ledgers with live receivables/payables tracking.</td></tr>
+  <tr><td><strong>Payments</strong></td><td><code>RazorpayController.java</code>, <code>RazorpayService.java</code></td><td>Razorpay order creation, payment capture, and HMAC-SHA256 webhook verification.</td></tr>
+  <tr><td><strong>Products</strong></td><td><code>AdminProductController.java</code>, <code>ProductService.java</code></td><td>Catalog CRUD, stock status toggling, and multi-image JSONB gallery management.</td></tr>
+  <tr><td><strong>Logistics</strong></td><td><code>ShiprocketService.java</code></td><td>Domestic courier BYOK token caching, AWB dispatch, and pincode serviceability.</td></tr>
+  <tr><td><strong>Superadmin</strong></td><td><code>SuperadminController.java</code>, <code>SuperadminService.java</code></td><td>Global cross-tenant analytics, store management, and impersonation engine.</td></tr>
+</table>
+
+<h3>Frontend Admin Suite (<code>frontend-admin/src</code>)</h3>
+<table>
+  <tr><th>Component / Utility</th><th>Key Responsibility</th></tr>
+  <tr><td><code>App.tsx</code></td><td>Master dashboard state coordinator, role-aware routing, and periodic data refresh.</td></tr>
+  <tr><td><code>PosCounter.tsx</code></td><td>Instant counter POS billing with barcode scanner support, hotkeys, and change calculator.</td></tr>
+  <tr><td><code>InvoiceList.tsx</code></td><td>Tax invoice register with period filters (This Month, Last Month) and GST KPI cards.</td></tr>
+  <tr><td><code>GstInvoiceModal.tsx</code></td><td>A4/A5 professional GST tax invoice with print and 1-tap WhatsApp sharing.</td></tr>
+  <tr><td><code>BatchInvoicesModal.tsx</code></td><td>Batch print &amp; PDF export with manual date pickers and multi-attribute search.</td></tr>
+  <tr><td><code>PartiesKhata.tsx</code></td><td>Customer and supplier credit ledgers with 1-tap WhatsApp payment reminders.</td></tr>
+  <tr><td><code>StoreSettings.tsx</code></td><td>5-tab studio for Bank IFSC auto-fetch, 15-digit GSTIN parser, and BYOK credentials.</td></tr>
+  <tr><td><code>AiProductScannerModal.tsx</code></td><td>AI camera studio with drag rotation turntable and studio command bar.</td></tr>
+  <tr><td><code>superadmin/*</code></td><td>Full Superadmin management suite (Overview, Stores, Customers, Orders, Subscriptions, Health).</td></tr>
+  <tr><td><code>utils/printInvoices.ts</code></td><td>Zero-blank-page isolated iframe print engine for thermal, inkjet, and laser printers.</td></tr>
+  <tr><td><code>utils/gstExport.ts</code></td><td>Multi-sheet Microsoft Excel XML (.xls) GSTR-1 workbook generator.</td></tr>
+</table>
+
+<h3>Frontend Storefront Suite (<code>frontend-storefront/src</code>)</h3>
+<table>
+  <tr><th>Component / Hook</th><th>Key Responsibility</th></tr>
+  <tr><td><code>MerchantLandingPage.tsx</code></td><td>Apex domain (<code>amazingdeal.co.in</code>) marketing landing page with instant store wizard.</td></tr>
+  <tr><td><code>StoreHeader.tsx</code></td><td>Branded store header with category navigation and customer login trigger.</td></tr>
+  <tr><td><code>ProductCard.tsx</code></td><td>Responsive product card with discount badges, stock indicators, and quick-add button.</td></tr>
+  <tr><td><code>CartDrawer.tsx</code></td><td>Slide-out cart drawer with delivery fee calculation and mandatory customer auth guard.</td></tr>
+  <tr><td><code>CheckoutModal.tsx</code></td><td>1-step checkout with saved address picker, delivery time slots, and payment modes.</td></tr>
+  <tr><td><code>CustomerAuthModal.tsx</code></td><td>Firebase Google 1-Tap and Mobile SMS OTP customer sign-in modal.</td></tr>
+  <tr><td><code>hooks/useSubdomain.ts</code></td><td>Extracts current store subdomain from URL hostname or query parameter.</td></tr>
+  <tr><td><code>hooks/useCustomerAuth.ts</code></td><td>Customer Firebase auth state listener and customer JWT token persistence.</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h1>10. Cloud DevOps &amp; Zero-Cost Infrastructure Playbook</h1>
+
+<h3>1. Production Deployment Topology</h3>
+<ul>
+  <li><strong>Database:</strong> Neon Serverless PostgreSQL 16 (AWS us-east-2). Automatically scales and sleeps when inactive to maintain ₹0 hosting cost.</li>
+  <li><strong>Backend Web Service:</strong> Render Free Tier (Docker runtime, Java 21 LTS). Paired with an automated Keep-Alive ping (Cron-job.org / UptimeRobot) pinging <code>/api/v1/health</code> every 10 minutes to eliminate cold starts.</li>
+  <li><strong>Frontend Static Assets:</strong> Cloudflare Pages / Workers. Unlimited bandwidth, deployed via <code>wrangler deploy</code> with custom routes for <code>admin.amazingdeal.co.in</code> and <code>*.amazingdeal.co.in</code>.</li>
+  <li><strong>Object Storage:</strong> Cloudflare R2 S3-compatible bucket (<code>media.amazingdeal.co.in</code>) with 10 GB free storage and 0 egress fees.</li>
+</ul>
+
+<h3>2. Alternative OCI Always-Free Stack</h3>
+<p>
+  The repository includes turnkey configuration for an <strong>Oracle Cloud Always-Free ARM VM</strong> (4 OCPUs, 24 GB RAM, 200 GB SSD) via <code>docker-compose.oci.yml</code>:
+</p>
+<pre>
+# Start complete local stack on OCI VM
+docker compose -f docker-compose.oci.yml up -d --build
+</pre>
+<p>
+  Includes local PostgreSQL 16 container, Spring Boot backend container, and Caddy container providing automated Let's Encrypt SSL certificates for <code>api.amazingdeal.co.in</code>.
+</p>
+
+<div style="text-align: center; margin-top: 50px; padding: 20px; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+  AmazingDeal Hyperlocal Commerce Platform • Master Engineering Manual • Generated for drskp • November 2026
+</div>
+
+</body>
+</html>

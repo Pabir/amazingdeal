@@ -14,17 +14,14 @@ const getApiBase = (): string => {
     if (host.includes('localhost') || host.includes('127.0.0.1')) {
       return 'http://localhost:8080';
     }
-    if (host.includes('workers.dev') || host.includes('pages.dev')) {
-      return 'https://amazingdeal-backend.onrender.com';
-    }
   }
 
   const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl && !envUrl.includes('api.amazingdeal.co.in')) {
-    return envUrl;
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim();
   }
 
-  return 'https://amazingdeal-backend.onrender.com';
+  return 'https://api.amazingdeal.co.in';
 };
 
 const API_BASE = getApiBase();
