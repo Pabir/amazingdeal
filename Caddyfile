@@ -4,6 +4,9 @@
 
 # Replace with your production API domain
 api.amazingdeal.co.in {
+    # Generate internal TLS certificate for Cloudflare "Full" SSL proxy
+    tls internal
+
     # Reverse proxy all API traffic directly to Spring Boot
     reverse_proxy backend:8080 {
         header_up Host {host}
