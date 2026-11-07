@@ -43,6 +43,7 @@ services:
     environment:
       PORT: 8080
       SPRING_PROFILES_ACTIVE: cloud
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m -XX:+UseG1GC"
       DATABASE_URL: jdbc:postgresql://postgres:5432/amazingdeal
       DB_USER: amazingdeal_owner
       DB_PASSWORD: ${DB_PASSWORD:-StrongOciDbPass2026!}
